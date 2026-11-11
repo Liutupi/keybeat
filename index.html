@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>键拍 KEYBEAT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -155,6 +155,32 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
 @keyframes bump{50%{transform:scale(1.35);color:var(--gold)}}
 .mult{color:var(--gold);font-size:.55em;margin-left:.4em}
 .keys{text-align:center;font-size:12px;color:var(--muted);margin-top:14px;display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+#quitBtn{display:none;padding:6px 14px;border:1px solid var(--line);border-radius:999px;color:var(--text);font-size:13px}
+#pad{display:none;flex-direction:column;gap:6px;padding-top:10px;user-select:none;-webkit-user-select:none;touch-action:manipulation;width:100%;max-width:640px;margin:0 auto}
+#pad.on{display:flex}
+.krow{display:flex;gap:5px;justify-content:center}
+.key{flex:1 1 0;min-width:0;max-width:60px;height:clamp(42px,7vh,56px);border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--text) 7%,transparent);font-family:var(--mono);font-size:19px;font-weight:500;color:var(--text);text-transform:uppercase;transition:transform .06s,background .1s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.key.wide{flex:5;max-width:none;text-transform:none;font-family:var(--body);font-size:13px;color:var(--muted)}
+.key.fn{flex:2;max-width:92px;text-transform:none;font-family:var(--body);font-size:13px}
+.key.down{background:var(--accent);color:var(--ink);transform:scale(.92)}
+#tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:4px 0 6px}
+.tile{width:clamp(42px,11.5vw,58px);height:clamp(42px,11.5vw,58px);border-radius:14px;border:1px solid var(--line);background:color-mix(in srgb,var(--text) 8%,transparent);font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .08s}
+.tile:active{transform:scale(.9)}
+.tile.used{visibility:hidden}
+.tile.bad{animation:shake .22s;border-color:var(--hot)}
+.touch body{touch-action:manipulation;overscroll-behavior:none}
+.touch #quitBtn{display:inline-block}
+.touch .keys,.touch kbd{display:none}
+.touch #play{padding:calc(10px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom))}
+.touch .stage{gap:10px}
+.touch .stats{gap:6px;grid-template-columns:repeat(4,1fr)}
+#tiles .krow{flex-basis:100%;margin-top:4px}
+.touch .stat{gap:3px}
+.touch .stat b{font-size:17px}
+.touch .stat span{font-size:10px;letter-spacing:.14em}
+.touch .next{font-size:13px}
+.touch #home{padding:calc(20px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));align-items:flex-start}
+.touch #result,.touch #me{padding-top:calc(20px + env(safe-area-inset-top));padding-bottom:calc(28px + env(safe-area-inset-bottom));align-items:flex-start}
 #flash{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0}
 #flash.err{background:radial-gradient(circle,transparent 45%,rgba(255,92,138,.35));animation:fl .25s}
 #flash.tier{background:linear-gradient(90deg,transparent,rgba(255,207,107,.28),transparent);animation:fl .45s}
@@ -216,7 +242,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
     <div class="best" id="best"></div>
     <button class="me" id="meBtn" aria-label="打开我的档案"><span class="ava" id="ava"></span><b id="meName"></b><span class="side"><strong id="meToday"></strong><span id="meGoal"></span></span><small id="meSub"></small></button>
     <p class="note warn" id="envNote" hidden>这是对话里的预览版：没有完整词库，用不了词典录音，学习记录也和本地版不互通。完整版请用浏览器打开文件夹里的 index.html。</p>
-    <p class="note">需要实体键盘，建议戴耳机并切换到英文输入法。</p>
+    <p class="note" id="devNote">需要实体键盘，建议戴耳机并切换到英文输入法。</p>
   </div>
   <div class="console">
     <div class="group">
@@ -225,6 +251,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
         <button class="mode" data-v="rhythm"><i>1</i><strong>节奏</strong><small>一章或一个单元一局。踩在拍点上按键得分更高，超时或敲错会断连击。</small></button>
         <button class="mode" data-v="sprint"><i>2</i><strong>竞速</strong><small>限时 45 秒，尽可能多地敲，测你的 WPM。</small></button>
         <button class="mode" data-v="dictation"><i>3</i><strong>听写</strong><small>只给发音和中文，凭记忆拼出来。</small></button>
+        <button class="mode" data-v="spell"><i>4</i><strong>拼词</strong><small>听发音、看中文，点字母块把词拼出来。手机上单手就能玩。</small></button>
       </div>
     </div>
     <div class="group">
@@ -276,6 +303,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
     <span class="where" id="where"></span>
     <div class="progress"><b id="prog"></b></div>
     <span id="left"></span>
+    <button id="quitBtn">退出</button>
   </div>
   <div class="stage">
     <div class="zh" id="zh"></div>
@@ -292,6 +320,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
     <div class="stat"><span>WPM</span><b id="wpm">0</b></div>
     <div class="stat"><span>准确率</span><b id="acc">100%</b></div>
   </div>
+  <div id="pad"><div id="tiles"></div><div id="kbd"></div></div>
   <div class="keys"><span><kbd>Tab</kbd> 重听发音</span><span id="hintKey"><kbd>Enter</kbd> 提示一个字母</span><span><kbd>Esc</kbd> 退出</span><span id="src"></span></div>
 </section>
 
@@ -878,7 +907,11 @@ function chapsOf(k){
 }
 function chapCount(k){ return chapsOf(k).length; }
 function chapLabel(k, c){ const cs = chapsOf(k); return cs.byUnit ? "Unit " + cs.byUnit[c] : "第 " + (c + 1) + " 章"; }
-const MODE_NAMES = {rhythm:"节奏",sprint:"竞速",dictation:"听写"};
+const MODE_NAMES = {rhythm:"节奏",sprint:"竞速",dictation:"听写",spell:"拼词"};
+const TOUCH = matchMedia("(pointer: coarse)").matches;
+if (TOUCH) document.documentElement.classList.add("touch");
+const hid = () => G.mode === "dictation" || G.mode === "spell";
+const buzz = pat => { if (TOUCH) try { navigator.vibrate && navigator.vibrate(pat); } catch(e){} };
 
 /* ================= storage ================= */
 // Local profiles: everything a player earns is stored under that profile's prefix in this browser.
@@ -999,7 +1032,7 @@ function sfxTier(){ if (!A.ctx) return; const t = A.ctx.currentTime; noise(t, .2
 function sfxCount(hi){ if (!A.ctx) return; tone("square", hi ? 1320 : 880, A.ctx.currentTime, .12, .12, {lp:3000}); }
 function curBar(t){ return Math.floor(Math.max(0, (t - A.t0) / A.stepDur) / 16) % 4; }
 function playStep(s, t){
-  const s16 = s % 16, ch = CHORDS[Math.floor(s / 16) % 4], calm = A.phase === "count" || G.mode === "dictation";
+  const s16 = s % 16, ch = CHORDS[Math.floor(s / 16) % 4], calm = A.phase === "count" || hid();
   if (s16 % 4 === 0) kick(t);
   if (A.phase === "count") return;
   if (s16 % 4 === 2) hat(t, calm ? .08 : .16);
@@ -1112,12 +1145,12 @@ function applyTheme(k){
 const tc = () => TIER_COL[A.tier] || TIER_COL[0];
 function setTier(t){ A.tier = t; document.documentElement.style.setProperty("--accent", `rgb(${TIER_COL[t]})`); }
 const FX = {shake:0, boost:0}, rays = [], beams = [], stars = [];
-for (let i = 0; i < 150; i++) stars.push({a:Math.random() * 6.283, d:Math.random(), z:Math.random()});
+for (let i = 0; i < (TOUCH ? 70 : 150); i++) stars.push({a:Math.random() * 6.283, d:Math.random(), z:Math.random()});
 const stageEl = document.querySelector(".stage"), edgeEl = document.getElementById("edge");
 function banner(txt){ const b = $("banner"); b.textContent = txt; b.classList.remove("on"); void b.offsetWidth; b.classList.add("on"); }
 function popScore(x, y, txt){ const d = document.createElement("div"); d.className = "pop-score"; d.textContent = txt; d.style.left = x + "px"; d.style.top = y + "px"; document.body.appendChild(d); setTimeout(() => d.remove(), 850); }
 function burst(x, y, n, col, power){
-  if (reduced) n = Math.min(n, 4);
+  if (reduced) n = Math.min(n, 4); else if (TOUCH) n = Math.ceil(n * .55);
   for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = (Math.random() * .8 + .3) * power;
     parts.push({x, y, vx:Math.cos(a) * v, vy:Math.sin(a) * v - power * .25, life:1, decay:Math.random() * .025 + .018, r:Math.random() * 2.2 + .8, col}); }
 }
@@ -1204,6 +1237,7 @@ function beginGame(){
     perfect:0, good:0, judged:0, wordErr:0, posErr:0, hints:0, wordsDone:0, missed:{}, samples:[], lastSample:0, startT:0, wordT:0, requeued:{}});
   if (G.daily) G.mode = "rhythm";
   if (G.mode === "rhythm") G.queue = pool.slice(0, byChap ? 40 : 20);
+  else if (G.mode === "spell") G.queue = pool.slice(0, byChap ? 40 : 20);
   else if (G.mode === "dictation") G.queue = pool.slice(0, 12);
   else { G.queue = pool; while (G.queue.length < 240) G.queue = G.queue.concat(shuffle(pool)); }
   G.total = G.queue.length;
@@ -1211,7 +1245,7 @@ function beginGame(){
   $("where").textContent = MODE_NAMES[G.mode] + " · " + LIST_NAMES[G.list] + (sbn && sbn[0] !== "all" ? sbn[1] : "") + (G.daily ? " · 每日挑战" : "") + (G.chapter >= 0 ? " · " + chapLabel(cfg.list, G.chapter) : "");
   $("limit").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
   $("lane").style.visibility = $("judge").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
-  $("hintKey").style.display = G.mode === "dictation" ? "" : "none";
+  $("hintKey").style.display = hid() ? "" : "none";
   $("word").innerHTML = ""; $("zh").textContent = ""; $("ipa").textContent = ""; $("next").textContent = ""; $("judge").textContent = "";
   setTier(0); hud(); show("play");
   $("count").classList.add("on"); $("count").innerHTML = "";
@@ -1223,14 +1257,14 @@ function beginPlay(){ G.state = "play"; A.phase = "play"; G.startT = performance
 function loadWord(){
   const e = G.queue[G.idx]; if (!e) return finish();
   G.cur = e; G.pos = 0; G.wordErr = 0; G.posErr = 0; G.wordT = performance.now(); G.wordScore = G.score;
-  G.limitMs = (e.w.length + 6) * (60000 / cfg.bpm);
+  G.limitMs = (e.w.length + 6) * (60000 / cfg.bpm) * (TOUCH ? 1.7 : 1);
   const el = $("word"); el.className = "word";
-  el.innerHTML = [...e.w].map(c => c === " " ? '<span class="ch sp">&nbsp;</span>' : `<span class="ch">${G.mode === "dictation" && /[a-z]/i.test(c) ? "·" : c}</span>`).join("");
+  el.innerHTML = [...e.w].map(c => c === " " ? '<span class="ch sp">&nbsp;</span>' : `<span class="ch">${hid() && /[a-z]/i.test(c) ? "·" : c}</span>`).join("");
   el.style.fontSize = e.w.length > 11 ? `min(clamp(34px,8vw,92px), calc(90vw / ${(e.w.length * .68).toFixed(1)}))` : "";
   $("zh").textContent = e.zh;
-  $("ipa").textContent = G.mode === "dictation" ? (e.phrase ? "听发音，拼出这个短语（空格也要敲）" : "听发音，拼出这个词") : e.ipa ? "/" + e.ipa + "/" : "短语 · 空格也要敲";
-  $("next").textContent = G.mode === "dictation" ? "" : G.queue.slice(G.idx + 1, G.idx + (e.phrase ? 2 : 4)).map(x => x.w).join("   ");
-  markCur(); if (G.mode !== "sprint") { speak(e.w, G.mode === "dictation"); const nx = G.queue[G.idx + 1]; if (nx && (cfg.speak || G.mode === "dictation")) preload(nx.w); }
+  $("ipa").textContent = G.mode === "spell" ? "听发音，按顺序点字母块" : hid() ? (e.phrase ? "听发音，拼出这个短语（空格也要敲）" : "听发音，拼出这个词") : e.ipa ? "/" + e.ipa + "/" : "短语 · 空格也要敲";
+  $("next").textContent = hid() ? "" : G.queue.slice(G.idx + 1, G.idx + (e.phrase ? 2 : 4)).map(x => x.w).join("   ");
+  updatePad(); markCur(); if (G.mode !== "sprint") { speak(e.w, hid()); const nx = G.queue[G.idx + 1]; if (nx && (cfg.speak || hid())) preload(nx.w); }
 }
 function markCur(){ const cs = $("word").children; for (let i = 0; i < cs.length; i++) cs[i].classList.toggle("cur", i === G.pos); }
 function centerOf(el){ const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
@@ -1266,17 +1300,19 @@ function hit(){
   FX.boost = Math.min(1, FX.boost + .3);
   if (!reduced) { ring(x, y, col, 3.5, .55, 1.4); if (q === 2 || G.mode !== "rhythm") beams.push({x, y, life:q === 2 ? 1 : .55, col}); }
   G.ok++; setCombo(G.combo + 1);
-  G.score += (G.mode === "dictation" ? (G.posErr ? 5 : 20) : 10) * mult() + q * 5 * mult();
+  G.score += (hid() ? (G.posErr ? 5 : 20) : 10) * mult() + q * 5 * mult();
+  buzz(8); if (G.mode === "spell") useTile(e.w[G.pos].toLowerCase());
   G.pos++; G.posErr = 0;
+  if (G.mode === "spell") while (G.pos < e.w.length && !/[a-z]/i.test(e.w[G.pos])) { $("word").children[G.pos].classList.add("done"); G.pos++; }
   if (G.pos >= e.w.length) wordDone(); else markCur();
   hud();
 }
 function miss(reveal){
-  G.err++; G.wordErr++; G.posErr++; setCombo(0); sfxError(); flash("err");
+  G.err++; G.wordErr++; G.posErr++; setCombo(0); sfxError(); flash("err"); buzz([18, 40, 18]);
   const w = $("word"); w.classList.remove("shake", "glitch"); void w.offsetWidth; w.classList.add("shake", "glitch");
   const [x, y] = centerOf(w.children[G.pos]); burst(x, y, 16, COL.hot, 5); FX.shake = 18; if (!reduced) ring(x, y, COL.hot, 7, .6, 2);
   G.missed[G.cur.w] = G.cur;
-  if (G.mode === "dictation" && (reveal || G.posErr >= 3)) { const el = w.children[G.pos]; if (G.cur.w[G.pos] !== " ") el.textContent = G.cur.w[G.pos]; el.style.color = "var(--hot)"; }
+  if (hid() && (reveal || G.posErr >= 3)) { const el = w.children[G.pos]; if (G.cur.w[G.pos] !== " ") el.textContent = G.cur.w[G.pos]; el.style.color = "var(--hot)"; }
   hud();
 }
 function wordDone(){
@@ -1317,7 +1353,7 @@ function finish(){
   G.state = "result"; musicStop(); speechStop(); setTier(0);
   store.set("wrong", wrongBook);
   let rank = acc >= 97 ? "S" : acc >= 93 ? "A" : acc >= 85 ? "B" : "C";
-  if (rank === "S" && ((G.mode === "rhythm" && beat < 60) || (G.mode === "sprint" && wpm < 50) || (G.mode === "dictation" && G.hints > 0))) rank = "A";
+  if (rank === "S" && ((G.mode === "rhythm" && beat < 60) || (G.mode === "sprint" && wpm < 50) || (hid() && G.hints > 0))) rank = "A";
   const key = "best." + G.mode + "." + G.list, old = store.get(key, null), isBest = !old || G.score > old.score;
   if (isBest) store.set(key, {score:G.score, wpm, acc});
   // ---- progress: xp, level, daily goal, streak, achievements ----
@@ -1341,7 +1377,7 @@ function finish(){
     ${goalJust ? '<span class="tag">今日目标达成</span>' : ""}${firstDaily ? '<span class="tag">每日挑战 +50 XP</span>' : ""}${newAch.map(a => `<span class="tag">成就：${a[1]}</span>`).join("")}</div>`;
   const nums = [["得分", G.score], ["WPM", wpm], ["准确率", acc, "%"], ["最高连击", G.maxCombo], ["完成词条", G.wordsDone]];
   if (G.mode === "rhythm") nums.push(["踩点率", beat, "%"]);
-  if (G.mode === "dictation") nums.push(["用了提示", G.hints, "次"]);
+  if (hid()) nums.push(["用了提示", G.hints, "次"]);
   $("card").innerHTML = `
     <div class="rank">${rank}</div>
     <div class="sum"><h2>${G.daily ? "每日挑战" : MODE_NAMES[G.mode]} · ${LIST_NAMES[G.list]}</h2>
@@ -1482,7 +1518,7 @@ addEventListener("keydown", e => {
   if (G.state === "me") { if (e.key === "Escape") goHome(); return; }
   if (G.state === "home") {
     if (e.key === "Enter" && !(document.activeElement && document.activeElement.tagName === "BUTTON")) { e.preventDefault(); startGame(); }
-    else if ("123".includes(e.key) && e.key) { cfg.mode = ["rhythm","sprint","dictation"][+e.key - 1]; renderHome(); }
+    else if ("1234".includes(e.key) && e.key) { cfg.mode = ["rhythm","sprint","dictation","spell"][+e.key - 1]; renderHome(); }
     else if (e.key === "ArrowLeft" || e.key === "ArrowRight") stepChap(e.key === "ArrowLeft" ? -1 : 1);
     return;
   }
@@ -1490,13 +1526,42 @@ addEventListener("keydown", e => {
   if (e.key === "Escape") { goHome(); return; }
   if (G.state !== "play") { e.preventDefault(); return; }
   if (e.key === "Tab") { e.preventDefault(); speak(G.cur.w, true); return; }
-  if (e.key === "Enter") { e.preventDefault(); if (G.mode === "dictation") { G.hints++; miss(true); } return; }
+  if (e.key === "Enter") { e.preventDefault(); if (hid()) { G.hints++; miss(true); } return; }
   if (e.repeat) return;
   const c = letterOf(e); if (!c) return;
   e.preventDefault();
   if (e.key === "Process" || e.isComposing) toast("检测到中文输入法，建议切换到英文");
-  if (c === G.cur.w[G.pos].toLowerCase()) hit(); else miss(false);
+  typeChar(c);
 });
+function typeChar(c){ if (G.state !== "play" || !G.cur) return; if (c === G.cur.w[G.pos].toLowerCase()) hit(); else miss(false); }
+/* ---------- on-screen input: keyboard on touch devices, letter tiles in spell mode ---------- */
+function useTile(c){ const t = [...document.querySelectorAll("#tiles .tile:not(.used)")].find(x => x.dataset.k === c); if (t) t.classList.add("used"); }
+function updatePad(){
+  const spell = G.mode === "spell", show = spell || TOUCH, e = G.cur;
+  $("pad").classList.toggle("on", show); if (!show || !e) return;
+  $("tiles").style.display = spell ? "" : "none"; $("kbd").style.display = spell ? "none" : "";
+  if (spell) {
+    const letters = [...e.w.toLowerCase()].filter(c => /[a-z]/.test(c)), pool = "abcdefghijklmnopqrstuvwxyz".split("").filter(c => !letters.includes(c));
+    for (let i = 0, n = letters.length <= 5 ? 3 : 2; i < n; i++) letters.push(pool.splice(Math.random() * pool.length | 0, 1)[0]);
+    $("tiles").innerHTML = shuffle(letters).map(c => `<button class="tile" data-k="${c}">${c}</button>`).join("") + '<div class="krow"><button class="key fn" data-k="replay">重听</button><button class="key fn" data-k="hint">提示</button></div>';
+    return;
+  }
+  const extra = [...new Set([...e.w].filter(c => "-'.".includes(c)))];
+  const row = r => `<div class="krow">${[...r].map(c => `<button class="key" data-k="${c}">${c}</button>`).join("")}</div>`;
+  $("kbd").innerHTML = row("qwertyuiop") + row("asdfghjkl") + row("zxcvbnm") +
+    `<div class="krow"><button class="key fn" data-k="replay">重听</button>${hid() ? '<button class="key fn" data-k="hint">提示</button>' : ""}<button class="key wide" data-k=" ">空格</button>${extra.map(c => `<button class="key" data-k="${c}">${c}</button>`).join("")}</div>`;
+}
+$("pad").addEventListener("pointerdown", ev => {
+  const b = ev.target.closest("[data-k]"); if (!b) return; ev.preventDefault();
+  const k = b.dataset.k; if (G.state !== "play") return;
+  if (k === "replay") { speak(G.cur.w, true); return; }
+  if (k === "hint") { G.hints++; miss(true); return; }
+  if (b.classList.contains("tile")) { if (k !== G.cur.w[G.pos].toLowerCase()) { b.classList.remove("bad"); void b.offsetWidth; b.classList.add("bad"); } }
+  else { b.classList.add("down"); setTimeout(() => b.classList.remove("down"), 110); }
+  typeChar(k);
+});
+$("quitBtn").onclick = goHome;
+if (TOUCH) $("devNote").textContent = "手机和平板上会显示屏幕键盘；想单手玩可以选“拼词”。建议戴耳机。";
 // without audio, drive the beat from the wall clock
 const _beatNow = beatNow;
 beatNow = function(){ return A.ctx && A.timer ? _beatNow() : (G.state === "count" || G.state === "play" || G.state === "swap") ? (performance.now() - fakeT0) / (60000 / cfg.bpm) : performance.now() / 545; };
