@@ -2,6 +2,7 @@
 usage: python3 -I build_data.py <qwerty-learner dicts dir> <out dir> <pep-vocab-3-6-by-unit.csv>
 """
 import csv, json, os, random, re, sys
+from junior_filter import junior_words
 
 SRC, OUT, PEPCSV = sys.argv[1], sys.argv[2], sys.argv[3]
 os.makedirs(OUT, exist_ok=True)
@@ -114,8 +115,7 @@ with open(PEPCSV, encoding="utf-8-sig", newline="") as fh:
         primary.append((w, ipa, zh, vol, unit))
         if " " in w:
             pvol_phr.append((w, ipa, zh))
-pset = {it[0].lower() for it in primary} | {w.lower() for w, _, _ in words(xx)}
-junior = [it for it in dedupe(words(cz)) if it[0].lower() not in pset]
+junior = junior_words(words(cz), primary + words(xx))
 
 lists = {
     "primary": primary,
