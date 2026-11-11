@@ -1,9 +1,9 @@
 """Build KEYBEAT data files from Qwerty Learner dictionaries.
-usage: python3 -I build_data.py <dicts dir> <out dir>
+usage: python3 -I build_data.py <qwerty-learner dicts dir> <out dir> <pep-vocab-3-6-by-unit.csv>
 """
-import json, os, random, re, sys
+import csv, json, os, random, re, sys
 
-SRC, OUT, EBB = sys.argv[1], sys.argv[2], sys.argv[3]
+SRC, OUT, PEPCSV = sys.argv[1], sys.argv[2], sys.argv[3]
 os.makedirs(OUT, exist_ok=True)
 OK = re.compile(r"^[A-Za-z][A-Za-z '.\-]*$")
 
@@ -90,25 +90,30 @@ GZ = ["PEPGaoZhong_%d_T.json" % i for i in range(1, 12)]
 xx, cz, gz = entries(XX), entries(CZ), entries(GZ)
 
 
-def ebb(name):
-    """PEP 2024 edition unit lists (EbbWords, Apache-2.0)."""
-    with open(os.path.join(EBB, name), encoding="utf-8") as fh:
-        j = json.load(fh)
-    out = []
-    for e in j["words"]:
-        w, zh = clean_text(e.get("w", "")), clean_trans(e.get("c"))
-        if w and zh and OK.match(w):
-            out.append((w, clean_ipa(e.get("i")), zh))
-    return out
-
-
-# primary school, PEP grade-3 start: one volume per term, in textbook order
-VOLS = [("3a", ebb("pep-3-1.json")), ("3b", ebb("pep-3-2.json"))] + \
-       [("%d%s" % (g, "ab"[t - 1]), entries(["PEPXiaoXue%d_%d_T.json" % (g, t)])) for g in (4, 5, 6) for t in (1, 2)]
-primary, pvol_phr = [], []
-for vol, items in VOLS:
-    primary += [it + (vol,) for it in dedupe(words(items))]
-    pvol_phr += phrases(items)
+# primary school, PEP grade-3 start: one volume per term, one chapter per textbook unit.
+# Source: a by-unit table transcribed from the textbook appendices (volume, unit, word, phonetic, meaning).
+primary, pvol_phr, seen_vu = [], [], set()
+with open(PEPCSV, encoding="utf-8-sig", newline="") as fh:
+    for r in csv.DictReader(fh):
+        w = clean_text(re.sub(r"\(.*?\)|…", " ", r["word"]))
+        zh = clean_trans(r["meaning"]).replace("(alsoEarth)", "（也作 Earth）").replace("(alsotheMoon)", "（也作 the Moon）")
+        # keep weak/strong forms ("kən, kæn"); drop a transcription that covers only part of a phrase
+        ipa = re.sub(r"\s*,\s*", "; ", r["phonetic"].strip().strip("[]/ ")).replace("ː l", "ːl")
+        if w == "T-shirt T":
+            w, zh = "T-shirt", "T恤衫"
+        if w == "set thetable":
+            w = "set the table"
+        if " " in w and len(ipa.split()) < len(w.split()):
+            ipa = ""
+        vol = r["volume"].replace("上", "a").replace("下", "b")
+        unit = re.sub(r"\D", "", r["unit"])
+        if not w or not zh or not OK.match(w) or (vol, w.lower()) in seen_vu:
+            print("skip", r["volume"], r["unit"], r["word"])
+            continue
+        seen_vu.add((vol, w.lower()))
+        primary.append((w, ipa, zh, vol, unit))
+        if " " in w:
+            pvol_phr.append((w, ipa, zh))
 pset = {it[0].lower() for it in primary} | {w.lower() for w, _, _ in words(xx)}
 junior = [it for it in dedupe(words(cz)) if it[0].lower() not in pset]
 

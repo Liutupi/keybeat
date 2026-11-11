@@ -67,6 +67,44 @@ kbd{font-family:var(--mono);font-size:.78em;padding:.15em .5em;border:1px solid 
 .chip:hover{color:var(--text)}
 .chip[aria-pressed="true"]{background:var(--text);color:var(--ink);border-color:var(--text)}
 .note{font-size:12px;color:var(--muted);margin:0}
+.note.warn{color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);border-radius:12px;padding:10px 14px;line-height:1.7;font-size:13px}
+.go{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.me{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:16px;width:100%;max-width:420px;transition:border-color .15s}
+.me:hover{border-color:var(--accent)}
+.ava{grid-row:span 2;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:600;font-size:17px;background:var(--accent);color:var(--ink)}
+.me b{font-size:15px;font-weight:600}
+.me small{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.me .side{grid-row:span 2;text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.me .side strong{display:block;font-family:var(--display);font-size:18px;color:var(--text);font-weight:600}
+.xpbar{display:block;height:4px;border-radius:4px;background:var(--line);overflow:hidden}
+.xpbar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+#me{overflow-y:auto;padding:clamp(20px,4vw,48px);justify-content:center}
+.mewrap{width:min(900px,100%);display:flex;flex-direction:column;gap:30px}
+.mewrap h2{font-size:12px;font-weight:500;letter-spacing:.2em;color:var(--muted);margin:0 0 12px}
+.mehead{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.mehead .ava{width:64px;height:64px;font-size:24px}
+.mehead h1{font-family:var(--display);font-size:24px;margin:0 0 4px;font-weight:600}
+.mehead p{margin:0;color:var(--muted);font-size:13px}
+.field{font:inherit;font-size:14px;color:var(--text);background:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:9px 14px}
+textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--mono);font-size:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px}
+.heat{display:grid;grid-template-columns:repeat(7,18px);gap:5px}
+.heat i{width:18px;height:18px;border-radius:5px;background:var(--line)}
+.heat i.on{background:var(--accent)}
+.heat i.today{outline:1px solid var(--text);outline-offset:1px}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ach{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;opacity:.45}
+.ach.got{opacity:1;border-color:var(--gold)}
+.ach b{font-size:14px}
+.ach.got b{color:var(--gold)}
+.ach small{font-size:12px;color:var(--muted)}
+.hist{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.hist td,.hist th{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;font-weight:400}
+.hist th{color:var(--muted);font-size:11px;letter-spacing:.14em}
+.gain{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:14px 18px;font-size:14px}
+.gain .xp{font-family:var(--display);font-weight:600;color:var(--gold);font-size:20px}
+.gain .lv{flex:1 1 180px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.gain .tag{padding:5px 12px;border-radius:999px;border:1px solid var(--gold);color:var(--gold);font-size:13px}
 .row{display:flex;flex-wrap:wrap;gap:22px 36px}
 .chip .lv{font-family:var(--mono);font-size:.72em;opacity:.6;margin-right:.5em}
 .chip .sw{display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:.5em;vertical-align:-.02em}
@@ -174,15 +212,17 @@ kbd{font-family:var(--mono);font-size:.78em;padding:.15em .5em;border:1px solid 
   <div class="brand">
     <h1 class="mark">键拍<span>KEYBEAT</span></h1>
     <p class="lede">跟着鼓点敲单词和短语。每一次按键都是一个音符，连击越高，音乐越满。从小学到雅思，看释义、听发音、把拼写敲进手指里。</p>
-    <button class="start" id="startBtn">开始 <kbd>Enter</kbd></button>
+    <div class="go"><button class="start" id="startBtn">开始 <kbd>Enter</kbd></button><button class="ghost" id="dailyBtn">每日挑战</button></div>
     <div class="best" id="best"></div>
+    <button class="me" id="meBtn" aria-label="打开我的档案"><span class="ava" id="ava"></span><b id="meName"></b><span class="side"><strong id="meToday"></strong><span id="meGoal"></span></span><small id="meSub"></small></button>
+    <p class="note warn" id="envNote" hidden>这是对话里的预览版：没有完整词库，用不了词典录音，学习记录也和本地版不互通。完整版请用浏览器打开文件夹里的 index.html。</p>
     <p class="note">需要实体键盘，建议戴耳机并切换到英文输入法。</p>
   </div>
   <div class="console">
     <div class="group">
       <h2>模式</h2>
       <div class="modes" id="modes">
-        <button class="mode" data-v="rhythm"><i>1</i><strong>节奏</strong><small>一章 20 个。踩在拍点上按键得分更高，超时或敲错会断连击。</small></button>
+        <button class="mode" data-v="rhythm"><i>1</i><strong>节奏</strong><small>一章或一个单元一局。踩在拍点上按键得分更高，超时或敲错会断连击。</small></button>
         <button class="mode" data-v="sprint"><i>2</i><strong>竞速</strong><small>限时 45 秒，尽可能多地敲，测你的 WPM。</small></button>
         <button class="mode" data-v="dictation"><i>3</i><strong>听写</strong><small>只给发音和中文，凭记忆拼出来。</small></button>
       </div>
@@ -256,6 +296,7 @@ kbd{font-family:var(--mono);font-size:.78em;padding:.15em .5em;border:1px solid 
 </section>
 
 <section id="result" class="screen"><div class="card" id="card"></div></section>
+<section id="me" class="screen"><div class="mewrap" id="meBody"></div></section>
 
 <script>
 "use strict";
@@ -795,7 +836,7 @@ const LISTS = [
   ["primary","小学","word"],["junior","初中","word"],["senior","高中","word"],["cet4","四级","word"],["cet6","六级","word"],["kaoyan","考研","word"],["toefl","托福","word"],["ielts","雅思","word"],
   ["dev","程序员","word",1],["med","医学英语","word",1],
   ["p1","小学","phrase"],["p2","初中","phrase"],["p3","高中","phrase"],["p4","进阶","phrase"],["p5","雅思","phrase"]];
-const LIST_NAMES = {wrong:"错词本"}; for (const l of LISTS) LIST_NAMES[l[0]] = l[1] + (l[2] === "phrase" ? "短语" : "");
+const LIST_NAMES = {wrong:"今日复习"}; for (const l of LISTS) LIST_NAMES[l[0]] = l[1] + (l[2] === "phrase" ? "短语" : "");
 const BANK = {};
 for (const k in RAW) BANK[k] = RAW[k].split("\n").map(l => { const [w,ipa,zh] = l.split("|"); return {w,ipa,zh}; });
 for (const k in RAWP) BANK[k] = RAWP[k].split("\n").map(l => { const [w,zh] = l.split("|"); return {w,ipa:"",zh,phrase:true}; });
@@ -803,7 +844,7 @@ for (const k in RAWP) BANK[k] = RAWP[k].split("\n").map(l => { const [w,zh] = l.
 BANK.p4 = BANK.p3.concat(BANK.p4); BANK.p3 = BANK.p2; BANK.p2 = BANK.p1; BANK.p5 = BANK.p4;
 const ALL = {}; for (const k in BANK) for (const e of BANK[k]) ALL[e.w] = e;
 const FULL = {}, loading = {}, MERGE = {dev:1, med:1, p4:1}, CH = 20;
-window.KB_DATA = (k, body) => { FULL[k] = body.split("\n").map(l => { const [w, ipa, zh, vol] = l.split("\t"); return {w, ipa, zh, vol, phrase:w.includes(" ")}; }); };
+window.KB_DATA = (k, body) => { FULL[k] = body.split("\n").map(l => { const [w, ipa, zh, vol, unit] = l.split("\t"); return {w, ipa, zh, vol, unit, phrase:w.includes(" ")}; }); };
 function ensureList(k){
   if (k === "wrong" || FULL[k]) return Promise.resolve();
   if (!loading[k]) loading[k] = new Promise(res => {
@@ -813,7 +854,7 @@ function ensureList(k){
   return loading[k];
 }
 // lists that are split into textbook volumes; the edition tag says which printing the words follow
-const SUBS = {primary:[["all","全部"],["3a","三上","2024 新版"],["3b","三下","2024 新版"],["4a","四上","旧版"],["4b","四下","旧版"],["5a","五上","旧版"],["5b","五下","旧版"],["6a","六上","旧版"],["6b","六下","旧版"]]};
+const SUBS = {primary:[["all","全部"],["3a","三上","2024 秋新版"],["3b","三下","2025 春新版"],["4a","四上","2024 新版"],["4b","四下","2024 新版"],["5a","五上","2024 新版"],["5b","五下","2014 旧版"],["6a","六上","2024 新版"],["6b","六下","2014 旧版"]]};
 const subCache = {};
 function subOf(k){ const o = SUBS[k]; if (!o) return null; return o.find(x => x[0] === cfg.sub) || o[0]; }
 function scope(k){ const sb = subOf(k); return sb && sb[0] !== "all" ? k + ":" + sb[0] : k; }
@@ -825,14 +866,70 @@ function listEntries(k){
     if (subCache[key].length) a = subCache[key]; }
   return a && a.length ? a : BANK.cet4;
 }
-function chapCount(k){ return Math.max(1, Math.ceil(listEntries(k).length / CH)); }
+// chapters: textbook units where the list has them (one volume selected), otherwise 20 items each
+const chapCache = {};
+function chapsOf(k){
+  const a = listEntries(k), key = scope(k) + "/" + a.length; if (chapCache[key]) return chapCache[key];
+  const sb = subOf(k); let out = [];
+  if (sb && sb[0] !== "all" && a[0] && a[0].unit) { const by = {}; for (const e of a) (by[e.unit] = by[e.unit] || (out.push([]), out[out.length - 1])).push(e); out.byUnit = a.map(e => e.unit).filter((u, i, arr) => arr.indexOf(u) === i); }
+  else for (let i = 0; i < a.length; i += CH) out.push(a.slice(i, i + CH));
+  if (!out.length) out = [a];
+  return chapCache[key] = out;
+}
+function chapCount(k){ return chapsOf(k).length; }
+function chapLabel(k, c){ const cs = chapsOf(k); return cs.byUnit ? "Unit " + cs.byUnit[c] : "第 " + (c + 1) + " 章"; }
 const MODE_NAMES = {rhythm:"节奏",sprint:"竞速",dictation:"听写"};
 
 /* ================= storage ================= */
+// Local profiles: everything a player earns is stored under that profile's prefix in this browser.
+let profs = null, curId = null;
+try { profs = JSON.parse(localStorage.getItem("keybeat.profiles") || "null"); curId = localStorage.getItem("keybeat.cur"); } catch(e){}
+if (!Array.isArray(profs) || !profs.length) profs = [{id:"p1", name:"玩家"}];
+if (!profs.some(x => x.id === curId)) curId = profs[0].id;
+const PFX = curId === "p1" ? "keybeat." : "keybeat." + curId + ".";
+function saveProfs(){ try { localStorage.setItem("keybeat.profiles", JSON.stringify(profs)); localStorage.setItem("keybeat.cur", curId); } catch(e){} }
 const store = {
-  get(k, d){ try { const v = localStorage.getItem("keybeat." + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
-  set(k, v){ try { localStorage.setItem("keybeat." + k, JSON.stringify(v)); } catch(e){} }
+  get(k, d){ try { const v = localStorage.getItem(PFX + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(PFX + k, JSON.stringify(v)); } catch(e){} }
 };
+const P = Object.assign({xp:0, goal:20, days:{}, words:{}, ach:{}, hist:[], maxCombo:0, bestWpm:0, sRanks:0, perfect:0, games:0, ms:0, daily:0}, store.get("me", {}));
+const saveP = () => store.set("me", P);
+const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+const dayRec = d => P.days[d] || (P.days[d] = {w:0, x:0, g:0});
+function streak(){ let d = today(), n = 0; if (!(P.days[d] && P.days[d].m)) d--; while (P.days[d] && P.days[d].m) { n++; d--; } return n; }
+const levelOf = xp => Math.floor(Math.sqrt(xp / 50)) + 1, xpFor = l => 50 * (l - 1) * (l - 1);
+const titleOf = l => l >= 40 ? "传奇" : l >= 30 ? "大师" : l >= 20 ? "高手" : l >= 12 ? "快手" : l >= 6 ? "熟手" : l >= 3 ? "学徒" : "新手";
+const GAPS = [0, 1, 2, 4, 8, 16];
+function learnWord(e, clean){
+  const r = P.words[e.w] || [0, 0, e.zh, e.ipa || ""];
+  r[0] = clean ? Math.min(5, r[0] + 1) : 1; r[1] = today() + GAPS[r[0]]; P.words[e.w] = r;
+}
+function dueList(){ const t = today(), out = []; for (const w in P.words) { const r = P.words[w]; if (r[0] < 5 && r[1] <= t) out.push({w, ipa:r[3] || "", zh:r[2], phrase:w.includes(" ")}); } return out; }
+const wordStats = () => { let n = 0, m = 0; for (const w in P.words) { n++; if (P.words[w][0] >= 3) m++; } return [n, m]; };
+const ACH = [
+  ["first","第一局","完成第一局", () => P.games >= 1],
+  ["s1","手感来了","拿到一次 S 评级", () => P.sRanks >= 1],
+  ["s10","稳定输出","拿到 10 次 S 评级", () => P.sRanks >= 10],
+  ["perfect","零失误","一局准确率 100%", () => P.perfect >= 1],
+  ["c50","五十连","连击达到 50", () => P.maxCombo >= 50],
+  ["c150","停不下来","连击达到 150", () => P.maxCombo >= 150],
+  ["w40","起步","WPM 达到 40", () => P.bestWpm >= 40],
+  ["w60","快手","WPM 达到 60", () => P.bestWpm >= 60],
+  ["w80","飞指","WPM 达到 80", () => P.bestWpm >= 80],
+  ["k100","百词","学过 100 个词", () => wordStats()[0] >= 100],
+  ["k500","五百词","学过 500 个词", () => wordStats()[0] >= 500],
+  ["k2000","两千词","学过 2000 个词", () => wordStats()[0] >= 2000],
+  ["m100","牢记一百","掌握 100 个词", () => wordStats()[1] >= 100],
+  ["m1000","牢记一千","掌握 1000 个词", () => wordStats()[1] >= 1000],
+  ["d3","三天不断","连续 3 天达成每日目标", () => streak() >= 3],
+  ["d7","一周不断","连续 7 天达成每日目标", () => streak() >= 7],
+  ["d30","整月不断","连续 30 天达成每日目标", () => streak() >= 30],
+  ["dc1","应战","完成一次每日挑战", () => P.daily >= 1],
+  ["dc7","常客","完成 7 次每日挑战", () => P.daily >= 7],
+  ["ch10","十章","通过 10 章", () => chaptersPassed() >= 10],
+  ["ch50","五十章","通过 50 章", () => chaptersPassed() >= 50]];
+function chaptersPassed(){ let n = 0; for (const k in passed) n += passed[k]; return n; }
+function checkAch(){ const got = []; for (const a of ACH) if (!P.ach[a[0]] && a[3]()) { P.ach[a[0]] = Date.now(); got.push(a); } return got; }
 let wrongBook = store.get("wrong", {});
 for (const w in wrongBook) if (typeof wrongBook[w] !== "object") { const e = ALL[w]; if (e) wrongBook[w] = {n:wrongBook[w], ipa:e.ipa, zh:e.zh}; else delete wrongBook[w]; }
 function addWrong(e){ const o = wrongBook[e.w] || {n:0, ipa:e.ipa, zh:e.zh}; o.n = Math.min(3, o.n + 1); wrongBook[e.w] = o; }
@@ -849,7 +946,7 @@ const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { c
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let toastT;
 function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2200); }
-function wrongList(){ return Object.keys(wrongBook).map(w => ({w, ipa:wrongBook[w].ipa || "", zh:wrongBook[w].zh, phrase:w.includes(" ")})); }
+function wrongList(){ const out = Object.keys(wrongBook).map(w => ({w, ipa:wrongBook[w].ipa || "", zh:wrongBook[w].zh, phrase:w.includes(" ")})), seen = new Set(out.map(e => e.w)); for (const e of dueList()) if (!seen.has(e.w)) out.push(e); return out; }
 
 /* ================= audio ================= */
 const A = {ctx:null, out:null, fxSend:null, an:null, noise:null, t0:0, step:0, timer:0, stepDur:.136, tier:0, phase:"off"};
@@ -1086,22 +1183,32 @@ function onBeat(bi){
 const G = {state:"home", mode:"rhythm"};
 const SPRINT_SECS = 45;
 function show(id){ for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); }
-function startGame(){
+let wantDaily = false;
+function seeded(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function startGame(daily){
   audioInit(); if (G.state === "loading") return;
+  wantDaily = daily === true;
   G.state = "loading"; ensureList(cfg.list).then(() => { if (G.state === "loading") beginGame(); });
 }
 function beginGame(){
   const all = listEntries(cfg.list), byChap = cfg.list !== "wrong" && cfg.order === "chapter", c = byChap ? chapOf(cfg.list) : -1;
-  const pool = shuffle(byChap ? all.slice(c * CH, c * CH + CH) : all).slice(0, 300);
-  G.chapter = c;
+  let pool = shuffle(byChap ? chapsOf(cfg.list)[c] : all).slice(0, 300);
+  G.chapter = c; G.daily = wantDaily;
+  if (G.daily) { // same 20 items for everyone on this list today
+    let h = today(); for (const ch of cfg.list) h = h * 31 + ch.charCodeAt(0) | 0;
+    const rnd = seeded(h), src = (FULL[cfg.list] || all).slice();
+    for (let i = src.length - 1; i > 0; i--) { const j = rnd() * (i + 1) | 0; [src[i], src[j]] = [src[j], src[i]]; }
+    pool = src.slice(0, 20); G.chapter = -1;
+  }
   Object.assign(G, {mode:cfg.mode, list:cfg.list, state:"count", queue:[], idx:0, pos:0, score:0, combo:0, maxCombo:0, ok:0, err:0,
     perfect:0, good:0, judged:0, wordErr:0, posErr:0, hints:0, wordsDone:0, missed:{}, samples:[], lastSample:0, startT:0, wordT:0, requeued:{}});
-  if (G.mode === "rhythm") G.queue = pool.slice(0, 20);
+  if (G.daily) G.mode = "rhythm";
+  if (G.mode === "rhythm") G.queue = pool.slice(0, byChap ? 40 : 20);
   else if (G.mode === "dictation") G.queue = pool.slice(0, 12);
   else { G.queue = pool; while (G.queue.length < 240) G.queue = G.queue.concat(shuffle(pool)); }
   G.total = G.queue.length;
   G.scope = scope(cfg.list); const sbn = subOf(cfg.list);
-  $("where").textContent = MODE_NAMES[G.mode] + " · " + LIST_NAMES[G.list] + (sbn && sbn[0] !== "all" ? sbn[1] : "") + (G.chapter >= 0 ? " · 第 " + (G.chapter + 1) + " 章" : "");
+  $("where").textContent = MODE_NAMES[G.mode] + " · " + LIST_NAMES[G.list] + (sbn && sbn[0] !== "all" ? sbn[1] : "") + (G.daily ? " · 每日挑战" : "") + (G.chapter >= 0 ? " · " + chapLabel(cfg.list, G.chapter) : "");
   $("limit").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
   $("lane").style.visibility = $("judge").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
   $("hintKey").style.display = G.mode === "dictation" ? "" : "none";
@@ -1174,6 +1281,7 @@ function miss(reveal){
 }
 function wordDone(){
   const e = G.cur, w = $("word"), clean = G.wordErr === 0;
+  learnWord(e, clean); dayRec(today()).w++;
   if (clean) { G.score += e.w.length * 5 * mult(); okWrong(e); }
   else addWrong(e);
   const [x, y] = centerOf(w), wc = clean ? COL.gold : tc();
@@ -1186,7 +1294,7 @@ function wordDone(){
   setTimeout(() => { if (G.state !== "swap") return; G.state = "play"; loadWord(); }, G.mode === "sprint" ? 70 : 200);
 }
 function timeoutWord(){
-  const e = G.cur; G.missed[e.w] = e; addWrong(e);
+  const e = G.cur; G.missed[e.w] = e; addWrong(e); learnWord(e, false);
   G.err++; setCombo(0); sfxError(); flash("err"); FX.shake = 16; toast("超时：" + e.w + " · " + e.zh);
   if (!G.requeued[e.w]) { G.requeued[e.w] = 1; G.queue.push(e); G.total++; }
   G.idx++; loadWord(); hud();
@@ -1212,24 +1320,41 @@ function finish(){
   if (rank === "S" && ((G.mode === "rhythm" && beat < 60) || (G.mode === "sprint" && wpm < 50) || (G.mode === "dictation" && G.hints > 0))) rank = "A";
   const key = "best." + G.mode + "." + G.list, old = store.get(key, null), isBest = !old || G.score > old.score;
   if (isBest) store.set(key, {score:G.score, wpm, acc});
+  // ---- progress: xp, level, daily goal, streak, achievements ----
+  const day = dayRec(today()), lvBefore = levelOf(P.xp), firstDaily = G.daily && !day.c;
+  if (G.daily) { day.c = Math.max(day.c || 0, G.score); if (firstDaily) P.daily++; }
+  const xpGain = Math.round(G.score / 25) + ({S:30, A:20, B:10, C:5})[rank] + (firstDaily ? 50 : 0);
+  P.xp += xpGain; day.x += xpGain; day.g++; P.games++; P.ms += performance.now() - G.startT;
+  P.maxCombo = Math.max(P.maxCombo, G.maxCombo); if (G.ok >= 60) P.bestWpm = Math.max(P.bestWpm, wpm);
+  if (rank === "S") P.sRanks++; if (acc === 100 && G.wordsDone >= 10) P.perfect++;
+  const goalJust = !day.m && day.w >= P.goal; if (goalJust) day.m = 1;
+  P.hist.unshift({t:Date.now(), m:G.daily ? "每日挑战" : MODE_NAMES[G.mode], l:LIST_NAMES[G.list], s:G.score, w:wpm, a:acc, r:rank}); P.hist.length = Math.min(P.hist.length, 30);
   const missed = Object.values(G.missed);
   const canNext = G.chapter >= 0 && G.mode !== "sprint" && acc >= 85;
   if (canNext) { passed[G.scope] = Math.max(passed[G.scope] || 0, G.chapter + 1); store.set("passed", passed); }
   const hasNext = canNext && G.chapter + 1 < chapCount(G.list);
+  const newAch = checkAch(), lvNow = levelOf(P.xp), lo = xpFor(lvNow), hi = xpFor(lvNow + 1), st = streak(); saveP();
+  if (lvNow > lvBefore) { banner("Lv " + lvNow); sfxTier(); }
+  const gainHtml = `<div class="gain"><span class="xp">+${xpGain} XP</span>
+    <span class="lv"><span>Lv ${lvNow} ${titleOf(lvNow)}${lvNow > lvBefore ? " · 升级了" : ""} · 距下一级还差 ${hi - P.xp} XP</span><span class="xpbar"><i style="width:${Math.round((P.xp - lo) / (hi - lo) * 100)}%"></i></span></span>
+    <span>今日 ${day.w} / ${P.goal} 词${day.m ? " · 已达标" : ""}</span><span>连续达标 ${st} 天</span>
+    ${goalJust ? '<span class="tag">今日目标达成</span>' : ""}${firstDaily ? '<span class="tag">每日挑战 +50 XP</span>' : ""}${newAch.map(a => `<span class="tag">成就：${a[1]}</span>`).join("")}</div>`;
   const nums = [["得分", G.score], ["WPM", wpm], ["准确率", acc, "%"], ["最高连击", G.maxCombo], ["完成词条", G.wordsDone]];
   if (G.mode === "rhythm") nums.push(["踩点率", beat, "%"]);
   if (G.mode === "dictation") nums.push(["用了提示", G.hints, "次"]);
   $("card").innerHTML = `
     <div class="rank">${rank}</div>
-    <div class="sum"><h2>${MODE_NAMES[G.mode]} · ${LIST_NAMES[G.list]}</h2>
+    <div class="sum"><h2>${G.daily ? "每日挑战" : MODE_NAMES[G.mode]} · ${LIST_NAMES[G.list]}</h2>
       <p>${isBest ? "新纪录。" : "最佳 " + old.score + " 分。"}${missed.length ? " 有 " + missed.length + " 个词出过错，已记入错词本。" : " 全部一次拼对。"}</p></div>
+    ${gainHtml}
     <div class="nums">${nums.map(n => `<div class="num"><span>${n[0]}</span><b>${n[1]}${n[2] ? "<small>" + n[2] + "</small>" : ""}</b></div>`).join("")}</div>
     <div class="chart"><p>速度曲线（WPM / 秒）</p><canvas id="chart"></canvas></div>
     ${missed.length ? `<div class="miss"><h3>需要再练</h3><ul>${missed.map(e => `<li><b>${e.w}</b>${e.zh}</li>`).join("")}</ul></div>` : ""}
     <div class="acts">${hasNext ? '<button class="start" id="nextBtn">下一章 <kbd>Enter</kbd></button><button class="ghost" id="againBtn">再练本章</button>' : '<button class="start" id="againBtn">再来一局 <kbd>Enter</kbd></button>'}<button class="ghost" id="homeBtn">返回 <kbd>Esc</kbd></button></div>`;
-  G.primary = hasNext ? () => { chaps[G.scope] = G.chapter + 1; store.set("ch", chaps); startGame(); } : startGame;
+  const again = G.daily ? () => startGame(true) : () => startGame();
+  G.primary = hasNext ? () => { chaps[G.scope] = G.chapter + 1; store.set("ch", chaps); startGame(); } : again;
   if (hasNext) $("nextBtn").onclick = G.primary;
-  $("againBtn").onclick = startGame; $("homeBtn").onclick = goHome;
+  $("againBtn").onclick = again; $("homeBtn").onclick = goHome;
   show("result"); drawChart(G.samples);
 }
 function drawChart(d){
@@ -1246,20 +1371,18 @@ function drawChart(d){
   const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, `rgba(${TIER_COL[0]},.28)`); gr.addColorStop(1, `rgba(${TIER_COL[0]},0)`); g.fillStyle = gr; g.fill();
   g.fillStyle = `rgb(${TH.gold})`; g.beginPath(); g.arc(px(d.length - 1), py(d[d.length - 1]), 4, 0, 6.283); g.fill();
 }
-function goHome(){ G.state = "home"; musicStop(); speechStop(); setTier(0); $("count").classList.remove("on"); store.set("wrong", wrongBook); renderHome(); show("home"); }
+function goHome(){ G.state = "home"; musicStop(); speechStop(); setTier(0); $("count").classList.remove("on"); store.set("wrong", wrongBook); saveP(); renderHome(); show("home"); }
 
 /* ================= home ================= */
 function renderHome(){
   const wl = wrongList();
-  if (cfg.list === "wrong" && wl.length < 3) { cfg.list = "cet4"; cfg.kind = "word"; }
+  if (cfg.list === "wrong" && wl.length < 1) { cfg.list = "cet4"; cfg.kind = "word"; }
   const items = LISTS.filter(l => l[2] === cfg.kind); let html = "", lv = 0, sep = false;
   for (const l of items) { if (l[3] && !sep) { html += '<span class="sep"></span>'; sep = true; }
     html += `<button class="chip" data-v="${l[0]}">${l[3] ? "" : `<span class="lv">Lv${++lv}</span>`}${l[1]}</button>`; }
-  if (wl.length >= 3) html += `<span class="sep"></span><button class="chip" data-v="wrong">错词本 ${wl.length}</button>`;
+  if (wl.length >= 1) html += `<span class="sep"></span><button class="chip" data-v="wrong">今日复习 ${wl.length}</button>`;
   $("lists").innerHTML = html;
-  const so = SUBS[cfg.list], cur = subOf(cfg.list);
-  $("subs").innerHTML = so ? so.map(x => `<button class="chip" data-v="${x[0]}" aria-pressed="${x === cur}">${x[1]}</button>`).join("") : "";
-  $("subs").style.display = so ? "" : "none";
+  renderSubs();
   $("themes").innerHTML = Object.keys(THEMES).map(k => `<button class="chip" data-v="${k}"><span class="sw" style="background:rgb(${THEMES[k].tiers[0]})"></span>${THEMES[k].name}</button>`).join("");
   const press = (sel, v) => { for (const b of document.querySelectorAll(sel)) b.setAttribute("aria-pressed", b.dataset.v === String(v)); };
   press("#modes .mode", cfg.mode); press("#kinds .chip", cfg.kind); press("#lists .chip", cfg.list); press("#bpms .chip", cfg.bpm); press("#themes .chip", cfg.theme);
@@ -1267,18 +1390,60 @@ function renderHome(){
   press("#accents .chip", cfg.accent); press("#sources .chip", cfg.source); renderVoices();
   const best = store.get("best." + cfg.mode + "." + cfg.list, null);
   $("best").innerHTML = best ? `${MODE_NAMES[cfg.mode]} · ${LIST_NAMES[cfg.list]} 最佳 <b>${best.score}</b> 分，<b>${best.wpm}</b> WPM，准确率 <b>${best.acc}%</b>` : `${MODE_NAMES[cfg.mode]} · ${LIST_NAMES[cfg.list]} 还没有记录`;
+  renderMe();
   store.set("cfg", cfg); renderChap();
-  const k = cfg.list; ensureList(k).then(() => { if (cfg.list === k && G.state === "home") renderChap(); });
+  const k = cfg.list; ensureList(k).then(() => { if (cfg.list === k && G.state === "home") { renderSubs(); renderChap(); } });
+}
+function renderSubs(){
+  const so = FULL[cfg.list] ? SUBS[cfg.list] : null, cur = subOf(cfg.list);  // volumes need the full data file
+  $("subs").innerHTML = so ? so.map(x => `<button class="chip" data-v="${x[0]}" aria-pressed="${x === cur}">${x[1]}</button>`).join("") : "";
+  $("subs").style.display = so ? "" : "none";
 }
 function renderChap(){
   const k = cfg.list, n = listEntries(k).length, unit = cfg.kind === "phrase" && k !== "wrong" ? "条" : "词";
-  if (k === "wrong") { $("chap").innerHTML = `共 ${n} 个待复习，全部随机出现`; return; }
+  $("envNote").hidden = !(loading[k + "!"] && location.protocol !== "file:");
+  if (k === "wrong") { $("chap").innerHTML = `共 ${n} 个到期或出过错的词，随机抽 20 个`; return; }
   const full = !!FULL[k], total = chapCount(k), done = passed[scope(k)] || 0, sb = subOf(k);
   $("chap").innerHTML = `<span>${sb && sb[2] && full ? "人教 PEP " + sb[1] + " · " + sb[2] + " · " : ""}${full ? "共 " + n + " " + unit : loading[k + "!"] ? "未找到完整词库（data 文件夹），使用内置 " + n + " " + unit : "词库加载中…"}</span>` +
-    (cfg.order === "chapter" ? `<button class="nav" id="chPrev" aria-label="上一章">‹</button><b>第 ${chapOf(k) + 1} / ${total} 章</b><button class="nav" id="chNext" aria-label="下一章">›</button>` : "") +
+    (cfg.order === "chapter" ? `<button class="nav" id="chPrev" aria-label="上一章">‹</button><b>${chapsOf(k).byUnit ? chapLabel(k, chapOf(k)) + " / 共 " + total + " 单元" : "第 " + (chapOf(k) + 1) + " / " + total + " 章"}</b><button class="nav" id="chNext" aria-label="下一章">›</button>` : "") +
     `<button class="chip" id="chOrder" aria-pressed="${cfg.order === "random"}">全库随机</button>` + (done ? `<span>已通过 ${done} 章</span>` : "");
   if ($("chPrev")) { $("chPrev").onclick = () => stepChap(-1); $("chNext").onclick = () => stepChap(1); }
   $("chOrder").onclick = () => { cfg.order = cfg.order === "random" ? "chapter" : "random"; store.set("cfg", cfg); renderChap(); };
+}
+function myName(){ return (profs.find(x => x.id === curId) || profs[0]).name; }
+function renderMe(){
+  const lv = levelOf(P.xp), lo = xpFor(lv), hi = xpFor(lv + 1), d = dayRec(today()), st = streak();
+  $("ava").textContent = myName().slice(0, 1).toUpperCase(); $("meName").textContent = myName();
+  $("meSub").innerHTML = `Lv ${lv} ${titleOf(lv)} · 连续达标 ${st} 天<span class="xpbar" style="margin-top:6px"><i style="width:${Math.round((P.xp - lo) / (hi - lo) * 100)}%"></i></span>`;
+  $("meToday").textContent = d.w + " / " + P.goal; $("meGoal").textContent = d.m ? "今日已达标" : "今日目标（词）";
+  $("dailyBtn").textContent = d.c ? "每日挑战 · 今日 " + d.c + " 分" : "每日挑战";
+}
+function openMe(){
+  G.state = "me"; const lv = levelOf(P.xp), [nw, nm] = wordStats(), t = today(), mins = Math.round(P.ms / 60000);
+  let heat = ""; const start = t - 34; for (let d = start; d <= t; d++) { const r = P.days[d]; heat += `<i class="${r && r.m ? "on" : ""}${d === t ? " today" : ""}" style="${r && r.w && !r.m ? "background:color-mix(in srgb,var(--accent) " + Math.min(70, Math.round(r.w / P.goal * 70)) + "%,var(--line))" : ""}" title="${r ? r.w : 0} 词"></i>`; }
+  const tiles = [["等级", "Lv " + lv, titleOf(lv)], ["经验", P.xp, "XP"], ["连续达标", streak(), "天"], ["学过", nw, "词"], ["已掌握", nm, "词"], ["最高 WPM", P.bestWpm], ["最高连击", P.maxCombo], ["完成", P.games, "局"], ["累计", mins, "分钟"]];
+  const prog = Object.keys(passed).filter(k => passed[k]).map(k => { const [l, sb] = k.split(":"), so = SUBS[l] && SUBS[l].find(x => x[0] === sb); return `<span class="chip" style="cursor:default">${LIST_NAMES[l] || l}${so ? so[1] : ""} · 已通过 ${passed[k]} 章</span>`; }).join("");
+  $("meBody").innerHTML = `
+    <div class="mehead"><span class="ava">${myName().slice(0, 1).toUpperCase()}</span><div style="flex:1;min-width:200px"><h1>${myName().replace(/</g, "&lt;")}</h1><p>档案保存在这台电脑的这个浏览器里。换浏览器或清除浏览数据前，请先在页面底部导出备份。</p></div><button class="ghost" id="meBack">返回 <kbd>Esc</kbd></button></div>
+    <div class="tiles">${tiles.map(x => `<div class="num"><span>${x[0]}</span><b>${x[1]}${x[2] ? "<small>" + x[2] + "</small>" : ""}</b></div>`).join("")}</div>
+    <div class="row"><div class="group"><h2>每日目标（完成的词数）</h2><div class="chips" id="goals">${[20, 40, 60, 100].map(g => `<button class="chip" data-v="${g}" aria-pressed="${P.goal === g}">${g} 词</button>`).join("")}</div></div>
+      <div class="group"><h2>最近 35 天</h2><div class="heat">${heat}</div></div></div>
+    ${prog ? `<div><h2>闯关进度</h2><div class="chips">${prog}</div></div>` : ""}
+    <div><h2>成就 ${Object.keys(P.ach).length} / ${ACH.length}</h2><div class="achs">${ACH.map(a => `<div class="ach${P.ach[a[0]] ? " got" : ""}"><b>${a[1]}</b><small>${a[2]}</small></div>`).join("")}</div></div>
+    ${P.hist.length ? `<div><h2>最近记录</h2><table class="hist"><tr><th>时间</th><th>模式</th><th>词库</th><th>评级</th><th>得分</th><th>WPM</th><th>准确率</th></tr>${P.hist.slice(0, 12).map(h => { const dt = new Date(h.t); return `<tr><td>${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}</td><td>${h.m}</td><td>${h.l}</td><td>${h.r}</td><td>${h.s}</td><td>${h.w}</td><td>${h.a}%</td></tr>`; }).join("")}</table></div>` : ""}
+    <div><h2>档案</h2><div class="voice"><label for="nameInput" style="font-size:13px;color:var(--muted)">昵称</label><input class="field" id="nameInput" maxlength="12" value="${myName().replace(/"/g, "&quot;")}"><button class="chip" id="nameSave">保存昵称</button>
+      <label for="profSel" style="font-size:13px;color:var(--muted);margin-left:8px">切换档案</label><select class="field" id="profSel">${profs.map(x => `<option value="${x.id}"${x.id === curId ? " selected" : ""}>${x.name.replace(/</g, "&lt;")}</option>`).join("")}</select><button class="chip" id="profNew">新建档案</button></div></div>
+    <div><h2>备份与迁移</h2><textarea class="field" id="backupBox" placeholder="点“导出”生成备份文字；或把之前导出的文字粘贴到这里，再点“导入”"></textarea><div class="voice"><button class="chip" id="bkExport">导出并复制</button><button class="chip" id="bkImport">导入（覆盖当前档案）</button><span id="bkMsg" style="font-size:13px;color:var(--muted)"></span></div></div>`;
+  $("meBack").onclick = goHome;
+  $("goals").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; P.goal = +b.dataset.v; const d = dayRec(today()); if (d.w >= P.goal) d.m = 1; saveP(); openMe(); };
+  $("nameSave").onclick = () => { const v = $("nameInput").value.trim(); if (!v) return; profs.find(x => x.id === curId).name = v; saveProfs(); openMe(); };
+  $("profSel").onchange = e => { curId = e.target.value; saveProfs(); location.reload(); };
+  $("profNew").onclick = () => { const id = "p" + Date.now().toString(36); profs.push({id, name:"玩家 " + (profs.length + 1)}); curId = id; saveProfs(); location.reload(); };
+  $("bkExport").onclick = () => { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith(PFX) && (curId !== "p1" || !/^keybeat\.(profiles$|cur$|p[a-z0-9]+\.)/.test(k))) o[k.slice(PFX.length)] = localStorage.getItem(k); } } catch(e){}
+    const txt = JSON.stringify({keybeat:1, name:myName(), data:o}); $("backupBox").value = txt; $("backupBox").select();
+    try { navigator.clipboard.writeText(txt).then(() => $("bkMsg").textContent = "已复制到剪贴板，存到备忘录或文件里", () => $("bkMsg").textContent = "已生成，请手动全选复制"); } catch(e){ $("bkMsg").textContent = "已生成，请手动全选复制"; } };
+  $("bkImport").onclick = () => { try { const j = JSON.parse($("backupBox").value); if (!j || j.keybeat !== 1 || !j.data) throw 0; for (const k in j.data) localStorage.setItem(PFX + k, j.data[k]); location.reload(); } catch(e){ $("bkMsg").textContent = "这段文字不是有效的备份"; } };
+  show("me"); $("me").scrollTop = 0;
 }
 function stepChap(d){
   const k = cfg.list; if (k === "wrong" || cfg.order !== "chapter") return;
@@ -1300,7 +1465,9 @@ pick("kinds", v => { if (v !== cfg.kind) { cfg.kind = v; cfg.list = v === "phras
 pick("themes", v => { cfg.theme = v; applyTheme(v); });
 $("optSpeak").onclick = () => { cfg.speak = !cfg.speak; renderHome(); };
 $("optMusic").onclick = () => { cfg.music = !cfg.music; renderHome(); };
-$("startBtn").onclick = startGame;
+$("startBtn").onclick = () => startGame();
+$("dailyBtn").onclick = () => startGame(true);
+$("meBtn").onclick = openMe;
 
 /* ================= input ================= */
 function letterOf(e){
@@ -1312,6 +1479,7 @@ function letterOf(e){
 }
 addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (G.state === "me") { if (e.key === "Escape") goHome(); return; }
   if (G.state === "home") {
     if (e.key === "Enter" && !(document.activeElement && document.activeElement.tagName === "BUTTON")) { e.preventDefault(); startGame(); }
     else if ("123".includes(e.key) && e.key) { cfg.mode = ["rhythm","sprint","dictation"][+e.key - 1]; renderHome(); }
