@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>键拍 KEYBEAT</title>
+<meta name="theme-color" content="#0a0b13">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="键拍">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=Fraunces:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Unbounded:wght@400;600;800&display=swap" rel="stylesheet">
@@ -242,6 +250,8 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
     <div class="best" id="best"></div>
     <button class="me" id="meBtn" aria-label="打开我的档案"><span class="ava" id="ava"></span><b id="meName"></b><span class="side"><strong id="meToday"></strong><span id="meGoal"></span></span><small id="meSub"></small></button>
     <p class="note warn" id="envNote" hidden>这是对话里的预览版：没有完整词库，用不了词典录音，学习记录也和本地版不互通。完整版请用浏览器打开文件夹里的 index.html。</p>
+    <button class="ghost" id="installBtn" hidden>添加到主屏幕</button>
+    <p class="note" id="installHint" hidden></p>
     <p class="note" id="devNote">需要实体键盘，建议戴耳机并切换到英文输入法。</p>
   </div>
   <div class="console">
@@ -1565,6 +1575,19 @@ if (TOUCH) $("devNote").textContent = "手机和平板上会显示屏幕键盘�
 // without audio, drive the beat from the wall clock
 const _beatNow = beatNow;
 beatNow = function(){ return A.ctx && A.timer ? _beatNow() : (G.state === "count" || G.state === "play" || G.state === "swap") ? (performance.now() - fakeT0) / (60000 / cfg.bpm) : performance.now() / 545; };
+/* ---------- install to home screen + offline cache (only on a real https site) ---------- */
+(function(){
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (location.protocol !== "https:" || standalone) return;
+  try { if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); } catch(e){}
+  let deferred = null; const btn = $("installBtn"), hint = $("installHint");
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; btn.hidden = false; hint.hidden = true; });
+  btn.onclick = () => { if (!deferred) return; deferred.prompt(); deferred.userChoice.then(() => { deferred = null; btn.hidden = true; }, () => {}); };
+  addEventListener("appinstalled", () => { btn.hidden = true; hint.hidden = true; });
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (ios) { hint.textContent = /CriOS|FxiOS|EdgiOS|MicroMessenger/.test(ua) ? "想放到主屏幕：请用 Safari 打开本页，点底部的“分享”，再选“添加到主屏幕”。" : "想放到主屏幕：点底部的“分享”按钮，再选“添加到主屏幕”。"; hint.hidden = false; }
+  else if (TOUCH) setTimeout(() => { if (!deferred) { hint.textContent = "想放到主屏幕：点浏览器右上角的菜单，选“添加到主屏幕”或“安装应用”。"; hint.hidden = false; } }, 4000);
+})();
 applyTheme(cfg.theme);
 renderHome();
 requestAnimationFrame(frame);
