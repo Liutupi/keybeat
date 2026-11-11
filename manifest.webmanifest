@@ -1,0 +1,16 @@
+{
+  "name": "键拍 KEYBEAT",
+  "short_name": "键拍",
+  "description": "跟着节拍敲单词的英语打字游戏",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0b13",
+  "theme_color": "#0a0b13",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
