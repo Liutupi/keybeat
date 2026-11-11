@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>键拍 KEYBEAT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=Fraunces:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&family=Unbounded:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one dark stage. Left-aligned console on the home screen, a single word alone in the middle while playing. */
+:root{
+  color-scheme:dark;
+  --ink:#0a0b13;
+  --ink-top:#17182b;
+  --dim:rgba(255,255,255,.22);
+  --dim-cur:rgba(255,255,255,.5);
+  --ink-2:#12131f;
+  --line:rgba(255,255,255,.1);
+  --text:#efecf6;
+  --muted:#8d8ca6;
+  --accent:#7cf0ff;
+  --hot:#ff5c8a;
+  --gold:#ffcf6b;
+  --display:"Unbounded","PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --body:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:radial-gradient(120% 90% at 50% 0%,var(--ink-top) 0%,var(--ink) 55%) var(--ink);transition:background .4s,color .3s;
+  color:var(--text);font-family:var(--body);overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.screen{position:relative;z-index:1;height:100%;display:none}
+.screen.on{display:flex}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+kbd{font-family:var(--mono);font-size:.78em;padding:.15em .5em;border:1px solid var(--line);border-radius:5px;color:var(--text);background:rgba(255,255,255,.04)}
+
+/* ---------- home ---------- */
+#home{overflow-y:auto;padding:clamp(20px,5vw,64px);gap:clamp(24px,5vw,72px);align-items:center;justify-content:center;flex-wrap:wrap}
+.brand{flex:1 1 320px;max-width:460px;display:flex;flex-direction:column;gap:22px}
+.mark{font-family:var(--display);font-weight:800;font-size:clamp(44px,7.5vw,88px);line-height:.95;letter-spacing:-.02em;margin:0;text-shadow:0 0 70px color-mix(in srgb,var(--accent) 55%,transparent)}
+.mark span{display:block;font-size:.3em;font-weight:400;letter-spacing:.42em;color:var(--accent);margin-top:.9em}
+.lede{color:var(--muted);line-height:1.75;margin:0;max-width:34em;font-size:15px}
+.start{align-self:flex-start;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.08em;
+  padding:16px 28px;border-radius:999px;background:var(--text);color:var(--ink);display:flex;gap:14px;align-items:center;
+  transition:transform .15s,box-shadow .15s}
+.start:hover{transform:translateY(-2px);box-shadow:0 10px 40px color-mix(in srgb,var(--accent) 45%,transparent)}
+.start kbd{border-color:rgba(0,0,0,.25);color:var(--ink);background:rgba(0,0,0,.06)}
+.best{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:1.4em}
+.best b{color:var(--text);font-weight:600}
+.console{flex:1 1 360px;max-width:520px;display:flex;flex-direction:column;gap:26px}
+.group h2{font-size:12px;font-weight:500;letter-spacing:.2em;color:var(--muted);margin:0 0 12px}
+.modes{display:flex;flex-direction:column;gap:8px}
+.mode{display:grid;grid-template-columns:34px 1fr;gap:4px 12px;text-align:left;padding:14px 16px;border-radius:14px;border:1px solid var(--line);transition:border-color .15s,background .15s}
+.mode i{grid-row:span 2;font-style:normal;font-family:var(--mono);color:var(--muted);align-self:center}
+.mode strong{font-size:16px;font-weight:600}
+.mode small{color:var(--muted);font-size:13px;line-height:1.5}
+.mode[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);box-shadow:0 0 0 1px var(--accent),0 12px 40px -18px var(--accent)}
+.mode[aria-pressed="true"] i{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 14px;border-radius:999px;border:1px solid var(--line);font-size:14px;color:var(--muted);transition:all .15s}
+.chip:hover{color:var(--text)}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--ink);border-color:var(--text)}
+.note{font-size:12px;color:var(--muted);margin:0}
+.row{display:flex;flex-wrap:wrap;gap:22px 36px}
+.chip .lv{font-family:var(--mono);font-size:.72em;opacity:.6;margin-right:.5em}
+.chip .sw{display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:.5em;vertical-align:-.02em}
+.sep{width:1px;background:var(--line);margin:4px 2px}
+.voice{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.voice select{font:inherit;font-size:13px;color:var(--text);background:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:7px 12px;max-width:230px}
+.voice .chip{padding:6px 12px;font-size:13px}
+.srcnote{font-size:12px;color:var(--muted);margin:8px 0 0;min-height:1.3em}
+.chap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chap b{color:var(--text);font-weight:600;min-width:9.5em;text-align:center}
+.chap .nav{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);color:var(--text);line-height:1}
+.chap .nav:hover{border-color:var(--accent);color:var(--accent)}
+.chap .chip{padding:5px 12px;font-size:13px}
+
+/* ---------- play ---------- */
+#play{flex-direction:column;padding:clamp(16px,3vw,32px)}
+.hud{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:13px;color:var(--muted)}
+.hud .where{letter-spacing:.14em}
+.progress{flex:1;max-width:420px;height:3px;background:var(--line);border-radius:3px;overflow:hidden}
+.progress b{display:block;height:100%;width:0;background:var(--accent);transition:width .2s linear}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:0;text-align:center}
+.zh{font-size:clamp(18px,2.6vw,26px);color:var(--text);min-height:1.4em}
+.word{font-family:var(--mono);font-weight:700;font-size:clamp(34px,8vw,92px);letter-spacing:.04em;line-height:1.1;white-space:nowrap;will-change:transform}
+.word .ch{display:inline-block;color:var(--dim);transition:color .08s,transform .12s}
+.word .ch.done{color:var(--text);text-shadow:0 0 22px var(--accent),0 0 60px var(--accent)}
+.word .ch.cur{color:var(--dim-cur);border-bottom:.06em solid var(--accent)}
+.word .ch.sp{width:.55em}
+.word .ch.pop{transform:translateY(-.12em) scale(1.12)}
+.word.shake{animation:shake .22s}
+.word.out{animation:out .22s forwards}
+@keyframes shake{20%{transform:translateX(-10px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes out{to{transform:scale(1.25);opacity:0;filter:blur(6px)}}
+.ipa{font-family:var(--mono);color:var(--muted);font-size:clamp(14px,1.8vw,18px);min-height:1.4em}
+.limit{width:min(420px,70vw);height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+.limit b{display:block;height:100%;width:100%;background:var(--gold);transform-origin:left}
+.lane{position:relative;width:min(420px,70vw);height:26px}
+.lane::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}
+.lane::after{content:"";position:absolute;left:50%;top:3px;bottom:3px;width:2px;margin-left:-1px;background:var(--accent);border-radius:2px;box-shadow:0 0 12px var(--accent)}
+.lane s{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;animation:fade .9s forwards}
+@keyframes fade{to{opacity:0;transform:scale(.4)}}
+.judge{font-family:var(--display);font-size:12px;letter-spacing:.3em;height:1.2em;color:var(--muted)}
+.next{font-family:var(--mono);color:var(--dim);font-size:15px;min-height:1.4em;letter-spacing:.06em}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:760px;width:100%;margin:0 auto}
+.stat{display:flex;flex-direction:column;gap:6px;align-items:center}
+.stat span{font-size:11px;letter-spacing:.24em;color:var(--muted)}
+.stat b{font-family:var(--display);font-weight:600;font-size:clamp(18px,3vw,30px);font-variant-numeric:tabular-nums}
+#combo.bump{animation:bump .18s}
+@keyframes bump{50%{transform:scale(1.35);color:var(--gold)}}
+.mult{color:var(--gold);font-size:.55em;margin-left:.4em}
+.keys{text-align:center;font-size:12px;color:var(--muted);margin-top:14px;display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+#flash{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0}
+#flash.err{background:radial-gradient(circle,transparent 45%,rgba(255,92,138,.35));animation:fl .25s}
+#flash.tier{background:linear-gradient(90deg,transparent,rgba(255,207,107,.28),transparent);animation:fl .45s}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+#edge{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;box-shadow:inset 0 0 150px 12px var(--accent)}
+#banner{position:fixed;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:var(--display);font-weight:800;font-size:min(17vw,170px);color:transparent;-webkit-text-stroke:2px var(--gold);opacity:0;white-space:nowrap}
+#banner.on{animation:banner .9s cubic-bezier(.2,.8,.2,1)}
+@keyframes banner{0%{opacity:0;transform:scale(2.6);letter-spacing:.5em}22%{opacity:1}100%{opacity:0;transform:scale(.92);letter-spacing:0}}
+.pop-score{position:fixed;z-index:3;font-family:var(--display);font-weight:600;font-size:24px;color:var(--gold);text-shadow:0 0 24px var(--gold);pointer-events:none;transform:translate(-50%,0);animation:rise .85s forwards}
+@keyframes rise{to{transform:translate(-50%,-90px) scale(1.25);opacity:0}}
+.word.glitch .ch{animation:glitch .24s}
+@keyframes glitch{0%,100%{text-shadow:none}30%{text-shadow:-7px 0 var(--hot),7px 0 var(--accent)}65%{text-shadow:6px 0 var(--hot),-6px 0 var(--accent)}}
+#flash.done{background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.3),transparent 55%);animation:fl .32s}
+.stage{will-change:transform}
+#count{position:fixed;inset:0;z-index:3;display:none;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:min(34vw,280px);color:var(--text);pointer-events:none}
+#count.on{display:flex}
+#count b{animation:cnt .45s both}
+@keyframes cnt{from{transform:scale(1.6);opacity:0}}
+#toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:4;background:var(--ink-2);border:1px solid var(--line);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+
+/* ---------- result ---------- */
+#result{overflow-y:auto;padding:clamp(20px,5vw,56px);align-items:center;justify-content:center}
+.card{width:min(860px,100%);display:grid;grid-template-columns:auto 1fr;gap:28px 40px;align-items:center}
+.rank{font-family:var(--display);font-weight:800;font-size:clamp(96px,18vw,190px);line-height:.85;color:var(--gold);text-shadow:0 0 60px color-mix(in srgb,var(--gold) 50%,transparent)}
+.sum h2{font-family:var(--display);font-weight:600;font-size:20px;margin:0 0 6px}
+.sum p{margin:0;color:var(--muted);font-size:14px}
+.nums{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px}
+.num{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.num span{font-size:11px;letter-spacing:.2em;color:var(--muted)}
+.num b{font-family:var(--display);font-weight:600;font-size:26px;font-variant-numeric:tabular-nums}
+.num b small{font-size:.5em;color:var(--muted);font-weight:400;margin-left:.3em}
+.chart{grid-column:1/-1}
+.chart canvas{width:100%;height:120px;display:block}
+.chart p,.miss h3{font-size:11px;letter-spacing:.2em;color:var(--muted);margin:0 0 8px;font-weight:500}
+.miss{grid-column:1/-1}
+.miss ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.miss li{font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:999px}
+.miss li b{font-family:var(--mono);color:var(--hot);margin-right:.5em}
+.acts{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap}
+.ghost{padding:14px 22px;border-radius:999px;border:1px solid var(--line);font-size:14px;display:flex;gap:10px;align-items:center}
+@media (max-width:560px){.card{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion:reduce){.word.shake,.word.out,.word.glitch .ch,#combo.bump,#count b,#banner.on{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div id="edge"></div>
+<div id="flash"></div>
+<div id="banner"></div>
+<div id="count"></div>
+<div id="toast"></div>
+
+<main id="home" class="screen on">
+  <div class="brand">
+    <h1 class="mark">键拍<span>KEYBEAT</span></h1>
+    <p class="lede">跟着鼓点敲单词和短语。每一次按键都是一个音符，连击越高，音乐越满。从小学到雅思，看释义、听发音、把拼写敲进手指里。</p>
+    <button class="start" id="startBtn">开始 <kbd>Enter</kbd></button>
+    <div class="best" id="best"></div>
+    <p class="note">需要实体键盘，建议戴耳机并切换到英文输入法。</p>
+  </div>
+  <div class="console">
+    <div class="group">
+      <h2>模式</h2>
+      <div class="modes" id="modes">
+        <button class="mode" data-v="rhythm"><i>1</i><strong>节奏</strong><small>一章 20 个。踩在拍点上按键得分更高，超时或敲错会断连击。</small></button>
+        <button class="mode" data-v="sprint"><i>2</i><strong>竞速</strong><small>限时 45 秒，尽可能多地敲，测你的 WPM。</small></button>
+        <button class="mode" data-v="dictation"><i>3</i><strong>听写</strong><small>只给发音和中文，凭记忆拼出来。</small></button>
+      </div>
+    </div>
+    <div class="group">
+      <h2>内容与难度</h2>
+      <div class="chips" id="kinds" style="margin-bottom:10px">
+        <button class="chip" data-v="word">单词</button>
+        <button class="chip" data-v="phrase">常用短语</button>
+      </div>
+      <div class="chips" id="lists"></div>
+      <div class="chips" id="subs" style="margin-top:10px"></div>
+      <div class="chap" id="chap"></div>
+    </div>
+    <div class="row">
+      <div class="group">
+        <h2>速度</h2>
+        <div class="chips" id="bpms">
+          <button class="chip" data-v="90">舒缓 90</button>
+          <button class="chip" data-v="110">标准 110</button>
+          <button class="chip" data-v="130">极速 130</button>
+        </div>
+      </div>
+      <div class="group">
+        <h2>声音</h2>
+        <div class="chips">
+          <button class="chip" id="optSpeak" aria-pressed="true">朗读发音</button>
+          <button class="chip" id="optMusic" aria-pressed="true">音乐与音效</button>
+        </div>
+        <div class="voice">
+          <div class="chips" id="accents"><button class="chip" data-v="us">美音</button><button class="chip" data-v="uk">英音</button></div>
+          <div class="chips" id="sources"><button class="chip" data-v="auto">词典录音优先</button><button class="chip" data-v="tts">只用系统语音</button></div>
+        </div>
+        <div class="voice">
+          <label for="voiceSel" style="font-size:13px;color:var(--muted)">系统语音</label>
+          <select id="voiceSel"></select>
+          <button class="chip" id="voiceTry">试听 tiger</button>
+        </div>
+        <p class="srcnote" id="srcHome"></p>
+      </div>
+    </div>
+    <div class="group">
+      <h2>主题</h2>
+      <div class="chips" id="themes"></div>
+    </div>
+  </div>
+</main>
+
+<section id="play" class="screen">
+  <div class="hud">
+    <span class="where" id="where"></span>
+    <div class="progress"><b id="prog"></b></div>
+    <span id="left"></span>
+  </div>
+  <div class="stage">
+    <div class="zh" id="zh"></div>
+    <div class="word" id="word"></div>
+    <div class="ipa" id="ipa"></div>
+    <div class="limit" id="limit"><b></b></div>
+    <div class="lane" id="lane"></div>
+    <div class="judge" id="judge"></div>
+    <div class="next" id="next"></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span>得分</span><b id="score">0</b></div>
+    <div class="stat"><span>连击</span><b id="combo">0</b></div>
+    <div class="stat"><span>WPM</span><b id="wpm">0</b></div>
+    <div class="stat"><span>准确率</span><b id="acc">100%</b></div>
+  </div>
+  <div class="keys"><span><kbd>Tab</kbd> 重听发音</span><span id="hintKey"><kbd>Enter</kbd> 提示一个字母</span><span><kbd>Esc</kbd> 退出</span><span id="src"></span></div>
+</section>
+
+<section id="result" class="screen"><div class="card" id="card"></div></section>
+
+<script>
+"use strict";
+/* ================= word banks ================= */
+const RAW = {
+junior:`time|taɪm|时间
+people|ˈpiːpl|人们
+because|bɪˈkɔːz|因为
+through|θruː|穿过；通过
+thought|θɔːt|想法
+enough|ɪˈnʌf|足够的
+different|ˈdɪfrənt|不同的
+important|ɪmˈpɔːrtnt|重要的
+together|təˈɡeðər|一起
+question|ˈkwestʃən|问题
+believe|bɪˈliːv|相信
+remember|rɪˈmembər|记得
+language|ˈlæŋɡwɪdʒ|语言
+answer|ˈænsər|回答
+friend|frend|朋友
+beautiful|ˈbjuːtɪfl|美丽的
+morning|ˈmɔːrnɪŋ|早晨
+weather|ˈweðər|天气
+however|haʊˈevər|然而
+already|ɔːlˈredi|已经
+usually|ˈjuːʒuəli|通常
+picture|ˈpɪktʃər|图片
+country|ˈkʌntri|国家
+minute|ˈmɪnɪt|分钟
+example|ɪɡˈzæmpl|例子
+between|bɪˈtwiːn|在…之间
+without|wɪˈðaʊt|没有
+knowledge|ˈnɑːlɪdʒ|知识
+interest|ˈɪntrəst|兴趣
+favorite|ˈfeɪvərɪt|最喜欢的
+breakfast|ˈbrekfəst|早餐
+business|ˈbɪznəs|生意；商业
+daughter|ˈdɔːtər|女儿
+building|ˈbɪldɪŋ|建筑物
+possible|ˈpɑːsəbl|可能的
+surprise|sərˈpraɪz|惊喜
+tomorrow|təˈmɑːroʊ|明天
+exercise|ˈeksərsaɪz|锻炼；练习
+neighbor|ˈneɪbər|邻居
+quiet|ˈkwaɪət|安静的`,
+cet4:`abandon|əˈbændən|放弃
+achieve|əˈtʃiːv|实现；达到
+adapt|əˈdæpt|适应
+benefit|ˈbenɪfɪt|好处；受益
+capacity|kəˈpæsəti|容量；能力
+challenge|ˈtʃælɪndʒ|挑战
+concentrate|ˈkɑːnsntreɪt|集中
+consequence|ˈkɑːnsɪkwens|后果
+contribute|kənˈtrɪbjuːt|贡献
+convince|kənˈvɪns|说服
+decline|dɪˈklaɪn|下降；谢绝
+demonstrate|ˈdemənstreɪt|证明；演示
+efficient|ɪˈfɪʃnt|高效的
+emphasis|ˈemfəsɪs|强调
+environment|ɪnˈvaɪrənmənt|环境
+essential|ɪˈsenʃl|必不可少的
+estimate|ˈestɪmeɪt|估计
+evidence|ˈevɪdəns|证据
+flexible|ˈfleksəbl|灵活的
+generate|ˈdʒenəreɪt|产生
+guarantee|ˌɡærənˈtiː|保证
+ignore|ɪɡˈnɔːr|忽视
+influence|ˈɪnfluəns|影响
+maintain|meɪnˈteɪn|维持
+obvious|ˈɑːbviəs|明显的
+opportunity|ˌɑːpərˈtuːnəti|机会
+participate|pɑːrˈtɪsɪpeɪt|参加
+potential|pəˈtenʃl|潜力；潜在的
+previous|ˈpriːviəs|先前的
+principle|ˈprɪnsəpl|原则
+recommend|ˌrekəˈmend|推荐
+reflect|rɪˈflekt|反映；反思
+reluctant|rɪˈlʌktənt|不情愿的
+resource|ˈriːsɔːrs|资源
+schedule|ˈskedʒuːl|日程；安排
+significant|sɪɡˈnɪfɪkənt|重要的；显著的
+strategy|ˈstrætədʒi|策略
+sufficient|səˈfɪʃnt|充足的
+tendency|ˈtendənsi|趋势；倾向
+valuable|ˈvæljuəbl|宝贵的`,
+cet6:`ambiguous|æmˈbɪɡjuəs|模棱两可的
+arbitrary|ˈɑːrbɪtreri|任意的；武断的
+comprehensive|ˌkɑːmprɪˈhensɪv|全面的
+contemplate|ˈkɑːntəmpleɪt|沉思；打算
+controversy|ˈkɑːntrəvɜːrsi|争议
+deteriorate|dɪˈtɪriəreɪt|恶化
+dilemma|dɪˈlemə|困境
+eloquent|ˈeləkwənt|雄辩的
+elaborate|ɪˈlæbərət|精心制作的；详述
+fluctuate|ˈflʌktʃueɪt|波动
+hypothesis|haɪˈpɑːθəsɪs|假设
+implicit|ɪmˈplɪsɪt|含蓄的
+inevitable|ɪnˈevɪtəbl|不可避免的
+inherent|ɪnˈhɪrənt|固有的
+integrity|ɪnˈteɡrəti|正直；完整
+legitimate|lɪˈdʒɪtɪmət|合法的；正当的
+meticulous|məˈtɪkjələs|一丝不苟的
+notorious|noʊˈtɔːriəs|臭名昭著的
+obsolete|ˌɑːbsəˈliːt|过时的
+paradox|ˈpærədɑːks|悖论
+perpetual|pərˈpetʃuəl|永久的
+plausible|ˈplɔːzəbl|貌似合理的
+pragmatic|præɡˈmætɪk|务实的
+prevalent|ˈprevələnt|盛行的
+profound|prəˈfaʊnd|深刻的
+reconcile|ˈrekənsaɪl|使和解；调和
+resilient|rɪˈzɪliənt|有韧性的
+scrutiny|ˈskruːtəni|仔细审查
+skeptical|ˈskeptɪkl|怀疑的
+spontaneous|spɑːnˈteɪniəs|自发的
+subtle|ˈsʌtl|微妙的
+sustain|səˈsteɪn|维持；支撑
+tentative|ˈtentətɪv|试探性的；暂定的
+transparent|trænsˈpærənt|透明的
+trivial|ˈtrɪviəl|琐碎的
+undermine|ˌʌndərˈmaɪn|逐渐削弱
+unprecedented|ʌnˈpresɪdentɪd|前所未有的
+versatile|ˈvɜːrsətl|多才多艺的；多功能的
+vulnerable|ˈvʌlnərəbl|脆弱的
+zealous|ˈzeləs|热心的`,
+dev:`algorithm|ˈælɡərɪðəm|算法
+argument|ˈɑːrɡjumənt|参数；实参
+asynchronous|eɪˈsɪŋkrənəs|异步的
+boolean|ˈbuːliən|布尔值
+callback|ˈkɔːlbæk|回调
+compile|kəmˈpaɪl|编译
+component|kəmˈpoʊnənt|组件
+concurrent|kənˈkɜːrənt|并发的
+configure|kənˈfɪɡjər|配置
+deprecated|ˈdeprəkeɪtɪd|已弃用的
+dependency|dɪˈpendənsi|依赖
+deploy|dɪˈplɔɪ|部署
+exception|ɪkˈsepʃn|异常
+execute|ˈeksɪkjuːt|执行
+framework|ˈfreɪmwɜːrk|框架
+function|ˈfʌŋkʃn|函数
+implement|ˈɪmplɪment|实现
+inherit|ɪnˈherɪt|继承
+initialize|ɪˈnɪʃəlaɪz|初始化
+instance|ˈɪnstəns|实例
+interface|ˈɪntərfeɪs|接口
+iterate|ˈɪtəreɪt|迭代
+latency|ˈleɪtənsi|延迟
+middleware|ˈmɪdlwer|中间件
+parameter|pəˈræmɪtər|参数；形参
+protocol|ˈproʊtəkɔːl|协议
+recursive|rɪˈkɜːrsɪv|递归的
+refactor|ˌriːˈfæktər|重构
+repository|rɪˈpɑːzətɔːri|仓库
+runtime|ˈrʌntaɪm|运行时
+schema|ˈskiːmə|模式；结构
+syntax|ˈsɪntæks|语法
+thread|θred|线程
+variable|ˈveriəbl|变量
+version|ˈvɜːrʒn|版本
+firmware|ˈfɜːrmwer|固件
+buffer|ˈbʌfər|缓冲区
+render|ˈrendər|渲染
+queue|kjuː|队列
+cache|kæʃ|缓存`,
+med:`diagnosis|ˌdaɪəɡˈnoʊsɪs|诊断
+symptom|ˈsɪmptəm|症状
+chronic|ˈkrɑːnɪk|慢性的
+acute|əˈkjuːt|急性的
+infection|ɪnˈfekʃn|感染
+inflammation|ˌɪnfləˈmeɪʃn|炎症
+antibiotic|ˌæntibaɪˈɑːtɪk|抗生素
+ventilator|ˈventɪleɪtər|呼吸机
+sepsis|ˈsepsɪs|脓毒症
+dialysis|daɪˈæləsɪs|透析
+hypertension|ˌhaɪpərˈtenʃn|高血压
+pneumonia|nuːˈmoʊniə|肺炎
+anesthesia|ˌænəsˈθiːʒə|麻醉
+hemorrhage|ˈhemərɪdʒ|出血
+respiratory|ˈrespərətɔːri|呼吸的
+cardiac|ˈkɑːrdiæk|心脏的
+renal|ˈriːnl|肾脏的
+prognosis|prɑːɡˈnoʊsɪs|预后
+intubation|ˌɪntuˈbeɪʃn|插管
+sedation|sɪˈdeɪʃn|镇静
+perfusion|pərˈfjuːʒn|灌注
+oxygen|ˈɑːksɪdʒən|氧气
+saturation|ˌsætʃəˈreɪʃn|饱和度
+catheter|ˈkæθɪtər|导管
+delirium|dɪˈlɪriəm|谵妄
+edema|ɪˈdiːmə|水肿
+fracture|ˈfræktʃər|骨折
+glucose|ˈɡluːkoʊs|葡萄糖
+insulin|ˈɪnsəlɪn|胰岛素
+thrombosis|θrɑːmˈboʊsɪs|血栓形成
+embolism|ˈembəlɪzəm|栓塞
+arrhythmia|əˈrɪðmiə|心律失常
+resuscitation|rɪˌsʌsɪˈteɪʃn|复苏
+nutrition|nuˈtrɪʃn|营养
+geriatric|ˌdʒeriˈætrɪk|老年医学的
+electrolyte|ɪˈlektrəlaɪt|电解质
+coagulation|koʊˌæɡjuˈleɪʃn|凝血
+analgesia|ˌænəlˈdʒiːziə|镇痛
+lactate|ˈlækteɪt|乳酸
+shock|ʃɑːk|休克`};
+Object.assign(RAW, {
+primary:`apple|ˈæpl|苹果
+banana|bəˈnænə|香蕉
+school|skuːl|学校
+teacher|ˈtiːtʃər|老师
+student|ˈstuːdnt|学生
+family|ˈfæməli|家庭
+mother|ˈmʌðər|妈妈
+father|ˈfɑːðər|爸爸
+brother|ˈbrʌðər|兄弟
+sister|ˈsɪstər|姐妹
+happy|ˈhæpi|快乐的
+water|ˈwɔːtər|水
+orange|ˈɔːrɪndʒ|橙子；橙色
+yellow|ˈjeloʊ|黄色
+purple|ˈpɜːrpl|紫色
+monkey|ˈmʌŋki|猴子
+tiger|ˈtaɪɡər|老虎
+rabbit|ˈræbɪt|兔子
+elephant|ˈelɪfənt|大象
+pencil|ˈpensl|铅笔
+window|ˈwɪndoʊ|窗户
+summer|ˈsʌmər|夏天
+winter|ˈwɪntər|冬天
+spring|sprɪŋ|春天
+number|ˈnʌmbər|数字
+birthday|ˈbɜːrθdeɪ|生日
+chicken|ˈtʃɪkɪn|鸡；鸡肉
+kitchen|ˈkɪtʃɪn|厨房
+bedroom|ˈbedruːm|卧室
+doctor|ˈdɑːktər|医生
+farmer|ˈfɑːrmər|农民
+football|ˈfʊtbɔːl|足球
+computer|kəmˈpjuːtər|电脑
+dinner|ˈdɪnər|晚餐
+flower|ˈflaʊər|花
+river|ˈrɪvər|河
+mountain|ˈmaʊntn|山
+animal|ˈænɪml|动物
+clothes|kloʊðz|衣服
+hungry|ˈhʌŋɡri|饿的
+music|ˈmjuːzɪk|音乐
+library|ˈlaɪbreri|图书馆
+weekend|ˈwiːkend|周末`,
+senior:`ability|əˈbɪləti|能力
+absence|ˈæbsəns|缺席
+accident|ˈæksɪdənt|事故
+advantage|ədˈvæntɪdʒ|优势
+attitude|ˈætɪtuːd|态度
+behavior|bɪˈheɪvjər|行为
+career|kəˈrɪr|职业
+celebrate|ˈselɪbreɪt|庆祝
+character|ˈkærəktər|性格；角色
+communicate|kəˈmjuːnɪkeɪt|交流
+competition|ˌkɑːmpəˈtɪʃn|竞争；比赛
+confident|ˈkɑːnfɪdənt|自信的
+culture|ˈkʌltʃər|文化
+curious|ˈkjʊriəs|好奇的
+decision|dɪˈsɪʒn|决定
+describe|dɪˈskraɪb|描述
+develop|dɪˈveləp|发展
+disappear|ˌdɪsəˈpɪr|消失
+discover|dɪˈskʌvər|发现
+education|ˌedʒuˈkeɪʃn|教育
+encourage|ɪnˈkɜːrɪdʒ|鼓励
+experience|ɪkˈspɪriəns|经验；经历
+familiar|fəˈmɪliər|熟悉的
+generous|ˈdʒenərəs|慷慨的
+government|ˈɡʌvərnmənt|政府
+imagine|ɪˈmædʒɪn|想象
+improve|ɪmˈpruːv|提高
+independent|ˌɪndɪˈpendənt|独立的
+journey|ˈdʒɜːrni|旅程
+necessary|ˈnesəseri|必要的
+patient|ˈpeɪʃnt|耐心的；病人
+pollution|pəˈluːʃn|污染
+protect|prəˈtekt|保护
+realize|ˈriːəlaɪz|意识到
+responsible|rɪˈspɑːnsəbl|负责的
+science|ˈsaɪəns|科学
+succeed|səkˈsiːd|成功
+technology|tekˈnɑːlədʒi|技术
+tradition|trəˈdɪʃn|传统
+volunteer|ˌvɑːlənˈtɪr|志愿者`,
+kaoyan:`abstract|ˈæbstrækt|抽象的；摘要
+accumulate|əˈkjuːmjəleɪt|积累
+acknowledge|əkˈnɑːlɪdʒ|承认；致谢
+advocate|ˈædvəkeɪt|提倡；拥护者
+allocate|ˈæləkeɪt|分配
+alternative|ɔːlˈtɜːrnətɪv|替代的；选择
+anticipate|ænˈtɪsɪpeɪt|预期
+assumption|əˈsʌmpʃn|假设
+bias|ˈbaɪəs|偏见
+coherent|koʊˈhɪrənt|连贯的
+compensate|ˈkɑːmpenseɪt|补偿
+constitute|ˈkɑːnstɪtuːt|构成
+constraint|kənˈstreɪnt|约束
+criterion|kraɪˈtɪriən|标准
+derive|dɪˈraɪv|得出；源于
+diminish|dɪˈmɪnɪʃ|减少
+distinguish|dɪˈstɪŋɡwɪʃ|区分
+dominant|ˈdɑːmɪnənt|占主导的
+empirical|ɪmˈpɪrɪkl|实证的
+enhance|ɪnˈhæns|提高；增强
+exploit|ɪkˈsplɔɪt|利用；剥削
+facilitate|fəˈsɪlɪteɪt|促进
+fundamental|ˌfʌndəˈmentl|基本的
+implication|ˌɪmplɪˈkeɪʃn|含义；影响
+incentive|ɪnˈsentɪv|激励
+inferior|ɪnˈfɪriər|较差的
+innovation|ˌɪnəˈveɪʃn|创新
+interpret|ɪnˈtɜːrprət|解释
+justify|ˈdʒʌstɪfaɪ|证明…正当
+mechanism|ˈmekənɪzəm|机制
+objective|əbˈdʒektɪv|客观的；目标
+perspective|pərˈspektɪv|视角
+phenomenon|fəˈnɑːmɪnən|现象
+preliminary|prɪˈlɪmɪneri|初步的
+rational|ˈræʃnəl|理性的
+reinforce|ˌriːɪnˈfɔːrs|加强
+substantial|səbˈstænʃl|大量的；实质的
+undergo|ˌʌndərˈɡoʊ|经历
+verify|ˈverɪfaɪ|核实
+welfare|ˈwelfer|福利`,
+toefl:`abundant|əˈbʌndənt|丰富的
+adjacent|əˈdʒeɪsnt|邻近的
+agriculture|ˈæɡrɪkʌltʃər|农业
+ancestor|ˈænsestər|祖先
+archaeology|ˌɑːrkiˈɑːlədʒi|考古学
+atmosphere|ˈætməsfɪr|大气；气氛
+biodiversity|ˌbaɪoʊdaɪˈvɜːrsəti|生物多样性
+climate|ˈklaɪmət|气候
+colony|ˈkɑːləni|殖民地；群体
+continent|ˈkɑːntɪnənt|大陆
+decompose|ˌdiːkəmˈpoʊz|分解
+drought|draʊt|干旱
+ecosystem|ˈiːkoʊsɪstəm|生态系统
+erosion|ɪˈroʊʒn|侵蚀
+evaporate|ɪˈvæpəreɪt|蒸发
+evolution|ˌevəˈluːʃn|进化
+excavate|ˈekskəveɪt|挖掘
+extinct|ɪkˈstɪŋkt|灭绝的
+fertile|ˈfɜːrtl|肥沃的
+fossil|ˈfɑːsl|化石
+glacier|ˈɡleɪʃər|冰川
+habitat|ˈhæbɪtæt|栖息地
+hemisphere|ˈhemɪsfɪr|半球
+indigenous|ɪnˈdɪdʒənəs|本土的
+irrigation|ˌɪrɪˈɡeɪʃn|灌溉
+mammal|ˈmæml|哺乳动物
+migrate|ˈmaɪɡreɪt|迁徙
+molecule|ˈmɑːlɪkjuːl|分子
+nutrient|ˈnuːtriənt|营养物
+organism|ˈɔːrɡənɪzəm|有机体
+photosynthesis|ˌfoʊtoʊˈsɪnθəsɪs|光合作用
+predator|ˈpredətər|捕食者
+primitive|ˈprɪmətɪv|原始的
+sediment|ˈsedɪmənt|沉积物
+species|ˈspiːʃiːz|物种
+terrain|təˈreɪn|地形
+theory|ˈθiːəri|理论
+tribe|traɪb|部落
+vegetation|ˌvedʒəˈteɪʃn|植被
+volcano|vɑːlˈkeɪnoʊ|火山`,
+ielts:`accommodation|əˌkɑːməˈdeɪʃn|住宿
+affordable|əˈfɔːrdəbl|负担得起的
+appliance|əˈplaɪəns|家用电器
+assessment|əˈsesmənt|评估
+attendance|əˈtendəns|出勤
+bachelor|ˈbætʃələr|学士
+campus|ˈkæmpəs|校园
+certificate|sərˈtɪfɪkət|证书
+commute|kəˈmjuːt|通勤
+congestion|kənˈdʒestʃən|拥堵
+consumption|kənˈsʌmpʃn|消费；消耗
+curriculum|kəˈrɪkjələm|课程体系
+deadline|ˈdedlaɪn|截止日期
+demographic|ˌdeməˈɡræfɪk|人口统计的
+deposit|dɪˈpɑːzɪt|押金；存款
+destination|ˌdestɪˈneɪʃn|目的地
+dissertation|ˌdɪsərˈteɪʃn|学位论文
+enrollment|ɪnˈroʊlmənt|注册；入学
+expenditure|ɪkˈspendɪtʃər|支出
+facility|fəˈsɪləti|设施
+globalization|ˌɡloʊbələˈzeɪʃn|全球化
+infrastructure|ˈɪnfrəstrʌktʃər|基础设施
+landlord|ˈlændlɔːrd|房东
+lecture|ˈlektʃər|讲座
+leisure|ˈliːʒər|休闲
+literacy|ˈlɪtərəsi|读写能力
+membership|ˈmembərʃɪp|会员资格
+obesity|oʊˈbiːsəti|肥胖
+outskirts|ˈaʊtskɜːrts|郊区
+pedestrian|pəˈdestriən|行人
+proportion|prəˈpɔːrʃn|比例
+questionnaire|ˌkwestʃəˈner|问卷
+recruitment|rɪˈkruːtmənt|招聘
+renewable|rɪˈnuːəbl|可再生的
+residential|ˌrezɪˈdenʃl|住宅的
+scholarship|ˈskɑːlərʃɪp|奖学金
+seminar|ˈsemɪnɑːr|研讨会
+sustainable|səˈsteɪnəbl|可持续的
+tuition|tuˈɪʃn|学费
+urbanization|ˌɜːrbənəˈzeɪʃn|城市化`});
+const RAWP = {
+p1:`good morning|早上好
+thank you|谢谢你
+see you later|回头见
+how are you|你好吗
+nice to meet you|很高兴认识你
+excuse me|打扰一下
+of course|当然
+no problem|没问题
+take care|保重
+good luck|祝你好运
+have a nice day|祝你今天愉快
+what time is it|现在几点了
+never mind|没关系
+wake up|醒来
+get up|起床
+go to bed|上床睡觉
+come on|加油；快点
+look at|看
+listen to|听
+a lot of|许多
+on the way|在路上
+at home|在家
+after school|放学后
+have a rest|休息一下
+go shopping|去购物
+play football|踢足球
+watch out|当心
+hurry up|快点
+wait a minute|等一下
+well done|做得好
+just a moment|稍等`,
+p2:`as soon as possible|尽快
+in order to|为了
+take part in|参加
+look forward to|期待
+be good at|擅长
+pay attention to|注意
+make a decision|做决定
+give up|放弃
+make progress|取得进步
+in front of|在…前面
+as a result|结果
+on the other hand|另一方面
+be proud of|以…为傲
+get along with|与…相处
+make up for|弥补
+run out of|用完
+put up with|忍受
+come up with|想出
+keep in touch|保持联系
+in spite of|尽管
+at the same time|同时
+by the way|顺便说一下
+all of a sudden|突然
+be fond of|喜欢
+take care of|照顾
+depend on|依靠
+break down|出故障；崩溃
+figure out|弄明白
+point out|指出
+turn down|拒绝；调低`,
+p3:`account for|解释；占
+in terms of|就…而言
+on behalf of|代表
+with regard to|关于
+take advantage of|利用
+give rise to|引起
+be subject to|受…支配
+in accordance with|依照
+to some extent|在某种程度上
+contribute to|有助于；导致
+be confronted with|面临
+live up to|不辜负
+bring about|导致
+cope with|应对
+at the expense of|以…为代价
+in the long run|从长远看
+by no means|绝不
+be bound to|必定
+take into account|考虑到
+play a role in|在…中起作用
+lay emphasis on|强调
+keep pace with|跟上
+on the contrary|相反
+in contrast to|与…形成对比
+be inclined to|倾向于
+come into effect|生效
+for the sake of|为了
+at all costs|不惜一切代价
+in the light of|鉴于
+make sense|讲得通
+carry out|执行
+be entitled to|有权
+rather than|而不是`,
+p4:`to a large extent|在很大程度上
+be attributed to|归因于
+shed light on|阐明
+be at odds with|与…不一致
+in the wake of|在…之后
+lend itself to|适合于
+bear in mind|牢记
+take for granted|认为理所当然
+draw a conclusion|得出结论
+pose a threat to|对…构成威胁
+raise awareness of|提高对…的认识
+a wide range of|各种各样的
+play a pivotal role|起关键作用
+strike a balance|取得平衡
+meet the demand|满足需求
+in the absence of|在缺乏…的情况下
+give priority to|优先考虑
+with the advent of|随着…的出现
+be prone to|易于
+on the verge of|濒临
+in proportion to|与…成比例
+at the outset|一开始
+by and large|总的来说
+to this end|为此
+in a nutshell|简而言之
+a case in point|一个恰当的例子
+be conducive to|有利于
+take measures to|采取措施
+bridge the gap|缩小差距
+stand a chance|有机会`};
+
+const LISTS = [
+  ["primary","小学","word"],["junior","初中","word"],["senior","高中","word"],["cet4","四级","word"],["cet6","六级","word"],["kaoyan","考研","word"],["toefl","托福","word"],["ielts","雅思","word"],
+  ["dev","程序员","word",1],["med","医学英语","word",1],
+  ["p1","小学","phrase"],["p2","初中","phrase"],["p3","高中","phrase"],["p4","进阶","phrase"],["p5","雅思","phrase"]];
+const LIST_NAMES = {wrong:"错词本"}; for (const l of LISTS) LIST_NAMES[l[0]] = l[1] + (l[2] === "phrase" ? "短语" : "");
+const BANK = {};
+for (const k in RAW) BANK[k] = RAW[k].split("\n").map(l => { const [w,ipa,zh] = l.split("|"); return {w,ipa,zh}; });
+for (const k in RAWP) BANK[k] = RAWP[k].split("\n").map(l => { const [w,zh] = l.split("|"); return {w,ipa:"",zh,phrase:true}; });
+// built-in samples are only a fallback for when the data/ files are missing
+BANK.p4 = BANK.p3.concat(BANK.p4); BANK.p3 = BANK.p2; BANK.p2 = BANK.p1; BANK.p5 = BANK.p4;
+const ALL = {}; for (const k in BANK) for (const e of BANK[k]) ALL[e.w] = e;
+const FULL = {}, loading = {}, MERGE = {dev:1, med:1, p4:1}, CH = 20;
+window.KB_DATA = (k, body) => { FULL[k] = body.split("\n").map(l => { const [w, ipa, zh, vol] = l.split("\t"); return {w, ipa, zh, vol, phrase:w.includes(" ")}; }); };
+function ensureList(k){
+  if (k === "wrong" || FULL[k]) return Promise.resolve();
+  if (!loading[k]) loading[k] = new Promise(res => {
+    const sc = document.createElement("script"); sc.src = "data/" + k + ".js";
+    sc.onload = () => { if (FULL[k] && MERGE[k]) { const have = new Set(BANK[k].map(e => e.w.toLowerCase())); FULL[k] = BANK[k].concat(FULL[k].filter(e => !have.has(e.w.toLowerCase()))); } res(); };
+    sc.onerror = () => { loading[k + "!"] = 1; res(); }; document.head.appendChild(sc); });
+  return loading[k];
+}
+// lists that are split into textbook volumes; the edition tag says which printing the words follow
+const SUBS = {primary:[["all","全部"],["3a","三上","2024 新版"],["3b","三下","2024 新版"],["4a","四上","旧版"],["4b","四下","旧版"],["5a","五上","旧版"],["5b","五下","旧版"],["6a","六上","旧版"],["6b","六下","旧版"]]};
+const subCache = {};
+function subOf(k){ const o = SUBS[k]; if (!o) return null; return o.find(x => x[0] === cfg.sub) || o[0]; }
+function scope(k){ const sb = subOf(k); return sb && sb[0] !== "all" ? k + ":" + sb[0] : k; }
+function listEntries(k){
+  if (k === "wrong") return wrongList();
+  let a = FULL[k] || BANK[k]; const sb = subOf(k);
+  if (sb && FULL[k]) { const key = scope(k);
+    if (!subCache[key]) { if (sb[0] === "all") { const seen = new Set(); subCache[key] = a.filter(e => !seen.has(e.w.toLowerCase()) && seen.add(e.w.toLowerCase())); } else subCache[key] = a.filter(e => e.vol === sb[0]); }
+    if (subCache[key].length) a = subCache[key]; }
+  return a && a.length ? a : BANK.cet4;
+}
+function chapCount(k){ return Math.max(1, Math.ceil(listEntries(k).length / CH)); }
+const MODE_NAMES = {rhythm:"节奏",sprint:"竞速",dictation:"听写"};
+
+/* ================= storage ================= */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem("keybeat." + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem("keybeat." + k, JSON.stringify(v)); } catch(e){} }
+};
+let wrongBook = store.get("wrong", {});
+for (const w in wrongBook) if (typeof wrongBook[w] !== "object") { const e = ALL[w]; if (e) wrongBook[w] = {n:wrongBook[w], ipa:e.ipa, zh:e.zh}; else delete wrongBook[w]; }
+function addWrong(e){ const o = wrongBook[e.w] || {n:0, ipa:e.ipa, zh:e.zh}; o.n = Math.min(3, o.n + 1); wrongBook[e.w] = o; }
+function okWrong(e){ const o = wrongBook[e.w]; if (o && --o.n <= 0) delete wrongBook[e.w]; }
+const chaps = store.get("ch", {}), passed = store.get("passed", {});
+function chapOf(k){ return Math.min(chaps[scope(k)] || 0, chapCount(k) - 1); }
+const cfg = Object.assign({mode:"rhythm", kind:"word", list:"cet4", order:"chapter", sub:"all", accent:"us", source:"auto", voice:"", bpm:110, speak:true, music:true, theme:"neon"}, store.get("cfg", {}));
+if (!MODE_NAMES[cfg.mode]) cfg.mode = "rhythm";
+if (!BANK[cfg.list] && cfg.list !== "wrong") { cfg.list = "cet4"; cfg.kind = "word"; }
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let toastT;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2200); }
+function wrongList(){ return Object.keys(wrongBook).map(w => ({w, ipa:wrongBook[w].ipa || "", zh:wrongBook[w].zh, phrase:w.includes(" ")})); }
+
+/* ================= audio ================= */
+const A = {ctx:null, out:null, fxSend:null, an:null, noise:null, t0:0, step:0, timer:0, stepDur:.136, tier:0, phase:"off"};
+const CHORDS = [[57,60,64,69,72,76],[53,57,60,65,69,72],[60,64,67,72,76,79],[55,59,62,67,71,74]]; // Am F C G
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function audioInit(){
+  if (A.ctx) { if (A.ctx.state === "suspended") A.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  const c = A.ctx = new AC();
+  const comp = c.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+  A.out = c.createGain(); A.out.gain.value = .8;
+  A.an = c.createAnalyser(); A.an.fftSize = 128; A.an.smoothingTimeConstant = .8;
+  A.out.connect(comp); comp.connect(A.an); A.an.connect(c.destination);
+  const d = c.createDelay(1), fb = c.createGain(), wet = c.createGain();
+  d.delayTime.value = .27; fb.gain.value = .32; wet.gain.value = .35;
+  A.fxSend = c.createGain(); A.fxSend.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(A.out); A.delay = d;
+  const len = c.sampleRate, buf = c.createBuffer(1, len, c.sampleRate), ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+  A.noise = buf;
+}
+function env(g, t, peak, dur, attack){ g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + (attack || .004)); g.gain.exponentialRampToValueAtTime(.0001, t + dur); }
+function tone(type, freq, t, peak, dur, opt){
+  if (!A.ctx || !cfg.music) return;
+  const c = A.ctx, o = c.createOscillator(), g = c.createGain(); opt = opt || {};
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (opt.to) o.frequency.exponentialRampToValueAtTime(opt.to, t + (opt.glide || dur));
+  env(g, t, peak, dur, opt.attack);
+  let node = o;
+  if (opt.lp) { const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = opt.lp; o.connect(f); node = f; }
+  node.connect(g); g.connect(A.out); if (opt.send) g.connect(A.fxSend);
+  o.start(t); o.stop(t + dur + .05);
+}
+function noise(t, peak, dur, type, freq, opt){
+  if (!A.ctx || !cfg.music) return;
+  const c = A.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); opt = opt || {};
+  s.buffer = A.noise; s.loop = true; f.type = type; f.frequency.setValueAtTime(freq, t);
+  if (opt.to) f.frequency.exponentialRampToValueAtTime(opt.to, t + dur);
+  env(g, t, peak, dur, opt.attack); s.connect(f); f.connect(g); g.connect(A.out);
+  s.start(t, Math.random()); s.stop(t + dur + .05);
+}
+const kick = t => { tone("sine", 150, t, .9, .26, {to:42, glide:.12}); };
+const hat = (t, v) => noise(t, v, .05, "highpass", 7500);
+const clap = t => { noise(t, .32, .13, "bandpass", 1600); noise(t + .012, .2, .1, "bandpass", 2100); };
+const bass = (t, m) => tone("sawtooth", mtof(m - 24), t, .3, .2, {lp:520});
+function pad(t, ch, dur){ for (const m of [ch[0], ch[1], ch[2]]) tone("triangle", mtof(m), t, .045, dur, {attack:dur * .3, lp:1400}); }
+function pluck(m, bright){ if (!A.ctx) return; const t = A.ctx.currentTime; tone("triangle", mtof(m), t, bright ? .24 : .17, .28, {send:true}); tone("sine", mtof(m + 12), t, .07, .16, {send:true}); }
+function sfxError(){ if (!A.ctx) return; const t = A.ctx.currentTime; tone("sawtooth", 92, t, .22, .16, {lp:900}); tone("square", 98, t, .12, .16, {lp:700}); noise(t, .12, .08, "lowpass", 900); }
+function sfxWord(ch){ if (!A.ctx) return; const t = A.ctx.currentTime; [ch[3], ch[4], ch[5] , ch[3] + 12].forEach((m, i) => tone("sine", mtof(m + 12), t + i * .045, .13, .35, {send:true})); noise(t, .09, .3, "highpass", 3000, {to:9000}); }
+function sfxTier(){ if (!A.ctx) return; const t = A.ctx.currentTime; noise(t, .2, .5, "bandpass", 500, {to:7000, attack:.3}); }
+function sfxCount(hi){ if (!A.ctx) return; tone("square", hi ? 1320 : 880, A.ctx.currentTime, .12, .12, {lp:3000}); }
+function curBar(t){ return Math.floor(Math.max(0, (t - A.t0) / A.stepDur) / 16) % 4; }
+function playStep(s, t){
+  const s16 = s % 16, ch = CHORDS[Math.floor(s / 16) % 4], calm = A.phase === "count" || G.mode === "dictation";
+  if (s16 % 4 === 0) kick(t);
+  if (A.phase === "count") return;
+  if (s16 % 4 === 2) hat(t, calm ? .08 : .16);
+  if (calm) { if (s16 === 0) pad(t, ch, A.stepDur * 16); return; }
+  if (A.tier >= 1) { if (s16 === 4 || s16 === 12) clap(t); if ([0,3,6,10,14].includes(s16)) bass(t, ch[0] + (s16 === 14 ? 12 : 0)); }
+  if (A.tier >= 2) { if (s16 === 0) pad(t, ch, A.stepDur * 16); if (s16 % 2 === 1) hat(t, .07); }
+  if (A.tier >= 3 && s16 % 2 === 0) tone("square", mtof(ch[(s16 / 2 * 2) % 6] + 12), t, .05, .12, {lp:2400, send:true});
+}
+function musicStart(){
+  if (!A.ctx) return;
+  A.stepDur = 60 / cfg.bpm / 4; A.delay.delayTime.value = A.stepDur * 3;
+  A.t0 = A.ctx.currentTime + .1; A.step = 0;
+  clearInterval(A.timer);
+  A.timer = setInterval(() => {
+    while (A.t0 + A.step * A.stepDur < A.ctx.currentTime + .12) { playStep(A.step, A.t0 + A.step * A.stepDur); A.step++; }
+  }, 25);
+}
+function musicStop(){ clearInterval(A.timer); A.timer = 0; A.phase = "off"; }
+function beatNow(){ return A.ctx && A.timer ? (A.ctx.currentTime - A.t0) / (A.stepDur * 4) : performance.now() / 545; }
+let voices = [], remoteFail = false, curAudio = null, duckT = 0, srcNote = "";
+const preAudio = {};
+const NOVELTY = /Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Good News|Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley/i;
+function loadVoices(){
+  try { voices = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang) && !NOVELTY.test(v.name)); } catch(e){ voices = []; }
+  if (typeof renderVoices === "function") renderVoices();
+}
+function autoVoice(){
+  const want = cfg.accent === "uk" ? /en[-_]GB/i : /en[-_]US/i;
+  const score = v => (want.test(v.lang) ? 8 : /en[-_](US|GB|AU)/i.test(v.lang) ? 2 : 0) + (/premium|enhanced|natural|neural|online|siri/i.test(v.name) ? 5 : 0) + (/Google|Samantha|Alex|Ava|Allison|Evan|Nathan|Zoe|Aria|Jenny|Guy|Daniel|Kate|Serena|Oliver|Karen/i.test(v.name) ? 3 : 0);
+  return voices.slice().sort((a, b) => score(b) - score(a))[0] || null;
+}
+function theVoice(){ return voices.find(v => v.name === cfg.voice) || autoVoice(); }
+if ("speechSynthesis" in window) { loadVoices(); try { speechSynthesis.onvoiceschanged = loadVoices; } catch(e){} }
+function setSrc(t){ srcNote = t; for (const id of ["src", "srcHome"]) { const el = document.getElementById(id); if (el) el.textContent = t; } }
+const dictUrl = w => "https://dict.youdao.com/dictvoice?type=" + (cfg.accent === "uk" ? 1 : 2) + "&audio=" + encodeURIComponent(w);
+const accentName = () => cfg.accent === "uk" ? "英音" : "美音";
+// lower the music while a word is being read so the pronunciation stays clear
+function duck(on){ if (A.ctx && A.out) A.out.gain.setTargetAtTime(on ? .22 : .8, A.ctx.currentTime, on ? .03 : .12); }
+function tts(w, done){
+  if (!("speechSynthesis" in window)) { setSrc("发音：这个浏览器没有语音"); done(); return; }
+  // Never speak without an explicit English voice: the default voice may be a Chinese one that misreads English.
+  const go = () => {
+    const v = theVoice();
+    if (!v) { setSrc("发音：没有找到英语系统语音，已跳过朗读"); done(); return; }
+    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(w);
+      u.voice = v; u.lang = v.lang; u.rate = .85; u.volume = 1; u.onend = u.onerror = done;
+      setSrc("发音：系统语音 · " + v.name + "（" + v.lang + "）"); speechSynthesis.speak(u); } catch(e){ done(); }
+  };
+  if (!voices.length) loadVoices();
+  if (voices.length) { go(); return; }
+  let fired = false; const once = () => { if (fired) return; fired = true; loadVoices(); go(); };
+  try { speechSynthesis.addEventListener("voiceschanged", once, {once:true}); } catch(e){}
+  setTimeout(once, 800);
+}
+function preload(w){
+  if (remoteFail || cfg.source === "tts" || preAudio[w]) return;
+  try { const a = new Audio(); a.preload = "auto"; a.src = dictUrl(w); preAudio[w] = a; const ks = Object.keys(preAudio); if (ks.length > 6) delete preAudio[ks[0]]; } catch(e){}
+}
+function speak(w, force){
+  if (!cfg.speak && !force) return;
+  duck(true); clearTimeout(duckT); duckT = setTimeout(() => duck(false), 2600);
+  const done = () => { clearTimeout(duckT); duckT = setTimeout(() => duck(false), 120); };
+  if (curAudio) { try { curAudio.pause(); } catch(e){} curAudio = null; }
+  try { speechSynthesis.cancel(); } catch(e){}
+  if (!remoteFail && cfg.source !== "tts") {
+    // recorded dictionary audio is clearer than a synthetic voice; falls back when it cannot load
+    try {
+      const a = curAudio = preAudio[w] || new Audio(dictUrl(w)); delete preAudio[w];
+      let fell = false; const fall = perm => { if (perm) remoteFail = true; if (fell || a !== curAudio) return; fell = true; tts(w, done); };
+      a.onended = done; a.onerror = () => fall(true); a.onplaying = () => setSrc("发音：有道词典录音（" + accentName() + "）");
+      if (a.error) { fall(true); return; }
+      try { a.currentTime = 0; } catch(e){}
+      const pr = a.play(); if (pr && pr.catch) pr.catch(e => { if (e && e.name !== "AbortError") fall(false); });
+      return;
+    } catch(e){ remoteFail = true; }
+  }
+  tts(w, done);
+}
+function speechStop(){ try { if (curAudio) curAudio.pause(); curAudio = null; speechSynthesis.cancel(); } catch(e){} clearTimeout(duckT); duck(false); }
+
+/* ================= visual fx ================= */
+const cv = $("fx"), cx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function resize(){ DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+addEventListener("resize", resize); resize();
+const parts = [], rings = [];
+const THEMES = {
+  neon:{name:"霓虹", ink:"#0a0b13", top:"#17182b", ink2:"#12131f", line:"255,255,255", text:"239,236,246", muted:"#8d8ca6", hot:"255,92,138", gold:"255,207,107",
+    tiers:["124,240,255","170,150,255","255,110,170","255,207,107"], display:"Unbounded", mono:"JetBrains Mono"},
+  gold:{name:"墨金", ink:"#0c0a07", top:"#241b0d", ink2:"#17130c", line:"255,236,200", text:"244,234,214", muted:"#9c907a", hot:"255,107,74", gold:"255,246,222",
+    tiers:["232,193,106","255,170,90","255,125,80","255,246,222"], display:"Fraunces", mono:"IBM Plex Mono"},
+  synth:{name:"赛博", ink:"#12071f", top:"#3a1150", ink2:"#1c0d2e", line:"255,200,255", text:"251,234,255", muted:"#a58bb8", hot:"255,92,92", gold:"255,209,102",
+    tiers:["255,79,216","160,110,255","80,220,255","255,209,102"], display:"Orbitron", mono:"Share Tech Mono"},
+  paper:{name:"纸白", light:true, ink:"#eef0f5", top:"#ffffff", ink2:"#ffffff", line:"20,24,40", text:"20,24,42", muted:"#6b7088", hot:"224,36,94", gold:"224,120,0",
+    tiers:["36,84,255","130,60,230","230,50,120","224,120,0"], display:"Bricolage Grotesque", mono:"IBM Plex Mono"}
+};
+let TH = THEMES.neon;
+const COL = {hot:"255,92,138", gold:"255,207,107", text:"239,236,246"};
+let TIER_COL = TH.tiers;
+function applyTheme(k){
+  TH = THEMES[k] || THEMES.neon; TIER_COL = TH.tiers; COL.hot = TH.hot; COL.gold = TH.gold; COL.text = TH.text;
+  const r = document.documentElement.style, set = (n, v) => r.setProperty(n, v);
+  set("color-scheme", TH.light ? "light" : "dark");
+  set("--ink", TH.ink); set("--ink-top", TH.top); set("--ink-2", TH.ink2); set("--line", `rgba(${TH.line},${TH.light ? .14 : .11})`);
+  set("--text", `rgb(${TH.text})`); set("--muted", TH.muted); set("--hot", `rgb(${TH.hot})`); set("--gold", `rgb(${TH.gold})`);
+  set("--dim", `rgba(${TH.line},.24)`); set("--dim-cur", `rgba(${TH.line},.55)`);
+  set("--display", `"${TH.display}","PingFang SC","Microsoft YaHei",sans-serif`); set("--mono", `"${TH.mono}",ui-monospace,Menlo,Consolas,monospace`);
+  setTier(A.tier || 0);
+}
+const tc = () => TIER_COL[A.tier] || TIER_COL[0];
+function setTier(t){ A.tier = t; document.documentElement.style.setProperty("--accent", `rgb(${TIER_COL[t]})`); }
+const FX = {shake:0, boost:0}, rays = [], beams = [], stars = [];
+for (let i = 0; i < 150; i++) stars.push({a:Math.random() * 6.283, d:Math.random(), z:Math.random()});
+const stageEl = document.querySelector(".stage"), edgeEl = document.getElementById("edge");
+function banner(txt){ const b = $("banner"); b.textContent = txt; b.classList.remove("on"); void b.offsetWidth; b.classList.add("on"); }
+function popScore(x, y, txt){ const d = document.createElement("div"); d.className = "pop-score"; d.textContent = txt; d.style.left = x + "px"; d.style.top = y + "px"; document.body.appendChild(d); setTimeout(() => d.remove(), 850); }
+function burst(x, y, n, col, power){
+  if (reduced) n = Math.min(n, 4);
+  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = (Math.random() * .8 + .3) * power;
+    parts.push({x, y, vx:Math.cos(a) * v, vy:Math.sin(a) * v - power * .25, life:1, decay:Math.random() * .025 + .018, r:Math.random() * 2.2 + .8, col}); }
+}
+function ring(x, y, col, speed, alpha, width){ rings.push({x, y, r:8, speed, life:1, alpha, col, width:width || 1.5}); }
+let lastBeat = -1; const freq = new Uint8Array(64);
+function frame(){
+  cx.clearRect(0, 0, W, H);
+  const b = beatNow(), bi = Math.floor(b), ph = b - bi;
+  if (bi !== lastBeat) { lastBeat = bi; onBeat(bi); }
+  // breathing glow behind the stage
+  const glow = (1 - ph) * (1 - ph), active = G.state === "play" || G.state === "swap" || G.state === "count";
+  const amp = active ? .1 + A.tier * .05 : .05, mx = W / 2, my = H * .45;
+  FX.boost *= .93; FX.shake *= .85;
+  if (active && !reduced) {
+    const k = FX.shake;
+    stageEl.style.transform = `translate(${(Math.random() - .5) * k}px,${(Math.random() - .5) * k}px) scale(${1 + glow * .012 * (1 + A.tier * .6)})`;
+    edgeEl.style.opacity = A.tier ? A.tier * .1 + glow * .16 * A.tier : 0;
+  } else { stageEl.style.transform = ""; edgeEl.style.opacity = 0; }
+  const gr = cx.createRadialGradient(W / 2, H * .45, 0, W / 2, H * .45, Math.max(W, H) * .55);
+  gr.addColorStop(0, `rgba(${tc()},${amp * (.35 + glow * .65)})`); gr.addColorStop(1, "rgba(0,0,0,0)");
+  cx.fillStyle = gr; cx.fillRect(0, 0, W, H);
+  cx.globalCompositeOperation = TH.light ? "source-over" : "lighter"; cx.lineCap = "round";
+  // warp field: stars streak outward, faster with combo and on every keystroke
+  if (!reduced) { const sp = (active ? .0035 + A.tier * .004 : .0009) + FX.boost * .018, R = Math.max(W, H) * .75;
+    cx.strokeStyle = `rgba(${tc()},${active ? .55 : .3})`;
+    for (const st of stars) { st.d += sp * (.3 + st.z) * (1 + st.d * 3);
+      if (st.d > 1.15) { st.d = Math.random() * .08 + .02; st.a = Math.random() * 6.283; }
+      const c = Math.cos(st.a), sn = Math.sin(st.a), x = mx + c * st.d * R, y = my + sn * st.d * R, len = sp * R * (3 + st.d * 16) + 1;
+      cx.globalAlpha = Math.min(1, st.d * 1.8); cx.lineWidth = .6 + st.z * 1.4 * st.d;
+      cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x - c * len, y - sn * len); cx.stroke(); }
+    cx.globalAlpha = 1; }
+  for (let i = rays.length - 1; i >= 0; i--) { const r = rays[i]; r.life -= .028; r.rot += .012;
+    if (r.life <= 0) { rays.splice(i, 1); continue; }
+    const L = (1 - r.life) * 700 + 180; cx.fillStyle = `rgba(${r.col},${r.life * r.life * .16})`;
+    for (let j = 0; j < 14; j++) { const a = r.rot + j * 6.283 / 14; cx.beginPath(); cx.moveTo(r.x, r.y); cx.lineTo(r.x + Math.cos(a - .045) * L, r.y + Math.sin(a - .045) * L); cx.lineTo(r.x + Math.cos(a + .045) * L, r.y + Math.sin(a + .045) * L); cx.fill(); } }
+  for (let i = beams.length - 1; i >= 0; i--) { const bm = beams[i]; bm.life -= .055;
+    if (bm.life <= 0) { beams.splice(i, 1); continue; }
+    const bg = cx.createLinearGradient(0, bm.y - H * .5, 0, bm.y + H * .5); bg.addColorStop(0, "rgba(0,0,0,0)"); bg.addColorStop(.5, `rgba(${bm.col},${bm.life * .7})`); bg.addColorStop(1, "rgba(0,0,0,0)");
+    cx.fillStyle = bg; const w = 2 + bm.life * 10; cx.fillRect(bm.x - w / 2, bm.y - H * .5, w, H); }
+  for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.r += r.speed; r.life -= .014;
+    if (r.life <= 0) { rings.splice(i, 1); continue; }
+    cx.strokeStyle = `rgba(${r.col},${r.alpha * r.life * r.life})`; cx.lineWidth = r.width; cx.beginPath(); cx.arc(r.x, r.y, r.r, 0, 6.283); cx.stroke(); }
+  for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx; p.y += p.vy; p.vy += .12; p.vx *= .985; p.life -= p.decay;
+    if (p.life <= 0) { parts.splice(i, 1); continue; }
+    cx.strokeStyle = `rgba(${p.col},${p.life})`; cx.lineWidth = p.r * p.life + .5; cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(p.x - p.vx * 2.4, p.y - p.vy * 2.4); cx.stroke(); }
+  // spectrum along the bottom edge
+  if (A.an && A.timer) { A.an.getByteFrequencyData(freq); const n = 48, bw = W / n;
+    for (let i = 0; i < n; i++) { const v = freq[i + 1] / 255, h = v * v * H * .16; cx.fillStyle = `rgba(${tc()},${.06 + v * .2})`; cx.fillRect(i * bw + 1, H - h, bw - 2, h); } }
+  cx.globalCompositeOperation = "source-over";
+  if (G.state === "play") tick();
+  requestAnimationFrame(frame);
+}
+function onBeat(bi){
+  if (G.state === "count") {
+    const n = 3 - bi;
+    if (n > 0) { $("count").innerHTML = "<b>" + n + "</b>"; sfxCount(false); }
+    else { $("count").classList.remove("on"); sfxCount(true); beginPlay(); }
+  }
+  if ((G.state === "play" || G.state === "swap") && !reduced) { ring(W / 2, H * .45, tc(), 5 + A.tier * 1.5, .12 + A.tier * .06); FX.boost = Math.min(1, FX.boost + .12 + A.tier * .06); }
+}
+
+/* ================= game ================= */
+const G = {state:"home", mode:"rhythm"};
+const SPRINT_SECS = 45;
+function show(id){ for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); }
+function startGame(){
+  audioInit(); if (G.state === "loading") return;
+  G.state = "loading"; ensureList(cfg.list).then(() => { if (G.state === "loading") beginGame(); });
+}
+function beginGame(){
+  const all = listEntries(cfg.list), byChap = cfg.list !== "wrong" && cfg.order === "chapter", c = byChap ? chapOf(cfg.list) : -1;
+  const pool = shuffle(byChap ? all.slice(c * CH, c * CH + CH) : all).slice(0, 300);
+  G.chapter = c;
+  Object.assign(G, {mode:cfg.mode, list:cfg.list, state:"count", queue:[], idx:0, pos:0, score:0, combo:0, maxCombo:0, ok:0, err:0,
+    perfect:0, good:0, judged:0, wordErr:0, posErr:0, hints:0, wordsDone:0, missed:{}, samples:[], lastSample:0, startT:0, wordT:0, requeued:{}});
+  if (G.mode === "rhythm") G.queue = pool.slice(0, 20);
+  else if (G.mode === "dictation") G.queue = pool.slice(0, 12);
+  else { G.queue = pool; while (G.queue.length < 240) G.queue = G.queue.concat(shuffle(pool)); }
+  G.total = G.queue.length;
+  G.scope = scope(cfg.list); const sbn = subOf(cfg.list);
+  $("where").textContent = MODE_NAMES[G.mode] + " · " + LIST_NAMES[G.list] + (sbn && sbn[0] !== "all" ? sbn[1] : "") + (G.chapter >= 0 ? " · 第 " + (G.chapter + 1) + " 章" : "");
+  $("limit").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
+  $("lane").style.visibility = $("judge").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
+  $("hintKey").style.display = G.mode === "dictation" ? "" : "none";
+  $("word").innerHTML = ""; $("zh").textContent = ""; $("ipa").textContent = ""; $("next").textContent = ""; $("judge").textContent = "";
+  setTier(0); hud(); show("play");
+  $("count").classList.add("on"); $("count").innerHTML = "";
+  A.phase = "count"; lastBeat = -1;
+  if (A.ctx) musicStart(); else { A.t0 = 0; fakeT0 = performance.now(); }
+}
+let fakeT0 = 0;
+function beginPlay(){ G.state = "play"; A.phase = "play"; G.startT = performance.now(); G.lastSample = G.startT; loadWord(); }
+function loadWord(){
+  const e = G.queue[G.idx]; if (!e) return finish();
+  G.cur = e; G.pos = 0; G.wordErr = 0; G.posErr = 0; G.wordT = performance.now(); G.wordScore = G.score;
+  G.limitMs = (e.w.length + 6) * (60000 / cfg.bpm);
+  const el = $("word"); el.className = "word";
+  el.innerHTML = [...e.w].map(c => c === " " ? '<span class="ch sp">&nbsp;</span>' : `<span class="ch">${G.mode === "dictation" && /[a-z]/i.test(c) ? "·" : c}</span>`).join("");
+  el.style.fontSize = e.w.length > 11 ? `min(clamp(34px,8vw,92px), calc(90vw / ${(e.w.length * .68).toFixed(1)}))` : "";
+  $("zh").textContent = e.zh;
+  $("ipa").textContent = G.mode === "dictation" ? (e.phrase ? "听发音，拼出这个短语（空格也要敲）" : "听发音，拼出这个词") : e.ipa ? "/" + e.ipa + "/" : "短语 · 空格也要敲";
+  $("next").textContent = G.mode === "dictation" ? "" : G.queue.slice(G.idx + 1, G.idx + (e.phrase ? 2 : 4)).map(x => x.w).join("   ");
+  markCur(); if (G.mode !== "sprint") { speak(e.w, G.mode === "dictation"); const nx = G.queue[G.idx + 1]; if (nx && (cfg.speak || G.mode === "dictation")) preload(nx.w); }
+}
+function markCur(){ const cs = $("word").children; for (let i = 0; i < cs.length; i++) cs[i].classList.toggle("cur", i === G.pos); }
+function centerOf(el){ const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
+function mult(){ return A.tier + 1; }
+function setCombo(n){
+  G.combo = n; if (n > G.maxCombo) G.maxCombo = n;
+  const tier = n >= 50 ? 3 : n >= 25 ? 2 : n >= 10 ? 1 : 0;
+  const up = tier > A.tier; setTier(tier);
+  if (up) { sfxTier(); flash("tier"); banner("×" + (tier + 1)); FX.boost = 1; if (!reduced) { ring(W / 2, H * .45, tc(), 22, .7, 4); rays.push({x:W / 2, y:H * .45, rot:0, life:1, col:tc()}); } }
+  const c = $("combo"); c.innerHTML = n + (tier ? `<span class="mult">×${tier + 1}</span>` : "");
+  if (n) { c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); }
+}
+function flash(k){ const f = $("flash"); f.className = ""; void f.offsetWidth; f.className = k; }
+function judge(){
+  if (!A.ctx || !A.timer) return 0;
+  const grid = A.stepDur * 2, t = A.ctx.currentTime - (A.ctx.outputLatency || 0) - A.t0;
+  let off = ((t % grid) + grid) % grid; if (off > grid / 2) off -= grid;
+  const ms = Math.abs(off) * 1000, q = ms <= 45 ? 2 : ms <= 95 ? 1 : 0;
+  const dot = document.createElement("s"), lane = $("lane");
+  dot.style.left = (50 + off / grid * 100) + "%"; dot.style.background = q === 2 ? "var(--gold)" : q === 1 ? "var(--accent)" : "var(--muted)";
+  lane.appendChild(dot); setTimeout(() => dot.remove(), 900);
+  const j = $("judge"); j.textContent = q === 2 ? "PERFECT" : q === 1 ? "GOOD" : off < 0 ? "EARLY" : "LATE";
+  j.style.color = q === 2 ? "var(--gold)" : q === 1 ? "var(--accent)" : "var(--muted)";
+  G.judged++; if (q === 2) G.perfect++; else if (q === 1) G.good++;
+  return q;
+}
+function hit(){
+  const el = $("word").children[G.pos], e = G.cur, q = G.mode === "rhythm" ? judge() : 0;
+  if (e.w[G.pos] !== " ") el.textContent = e.w[G.pos]; el.classList.add("done", "pop"); setTimeout(() => el.classList.remove("pop"), 120);
+  const ch = CHORDS[A.ctx ? curBar(A.ctx.currentTime) : 0];
+  pluck(ch[G.pos % 6] + (G.pos >= 6 ? 12 : 0), q === 2);
+  const [x, y] = centerOf(el), col = q === 2 ? COL.gold : tc(); burst(x, y, q === 2 ? 22 : 12, col, q === 2 ? 6.5 : 4.5);
+  FX.boost = Math.min(1, FX.boost + .3);
+  if (!reduced) { ring(x, y, col, 3.5, .55, 1.4); if (q === 2 || G.mode !== "rhythm") beams.push({x, y, life:q === 2 ? 1 : .55, col}); }
+  G.ok++; setCombo(G.combo + 1);
+  G.score += (G.mode === "dictation" ? (G.posErr ? 5 : 20) : 10) * mult() + q * 5 * mult();
+  G.pos++; G.posErr = 0;
+  if (G.pos >= e.w.length) wordDone(); else markCur();
+  hud();
+}
+function miss(reveal){
+  G.err++; G.wordErr++; G.posErr++; setCombo(0); sfxError(); flash("err");
+  const w = $("word"); w.classList.remove("shake", "glitch"); void w.offsetWidth; w.classList.add("shake", "glitch");
+  const [x, y] = centerOf(w.children[G.pos]); burst(x, y, 16, COL.hot, 5); FX.shake = 18; if (!reduced) ring(x, y, COL.hot, 7, .6, 2);
+  G.missed[G.cur.w] = G.cur;
+  if (G.mode === "dictation" && (reveal || G.posErr >= 3)) { const el = w.children[G.pos]; if (G.cur.w[G.pos] !== " ") el.textContent = G.cur.w[G.pos]; el.style.color = "var(--hot)"; }
+  hud();
+}
+function wordDone(){
+  const e = G.cur, w = $("word"), clean = G.wordErr === 0;
+  if (clean) { G.score += e.w.length * 5 * mult(); okWrong(e); }
+  else addWrong(e);
+  const [x, y] = centerOf(w), wc = clean ? COL.gold : tc();
+  for (const l of w.children) { const [lx, ly] = centerOf(l); burst(lx, ly, clean ? 12 : 6, wc, 6.5); }
+  burst(x, y, clean ? 40 : 16, COL.text, 9); FX.shake = clean ? 12 : 6; FX.boost = 1; flash("done");
+  if (!reduced) { ring(x, y, wc, 10, .7, 3); ring(x, y, COL.text, 16, .3, 1.2); ring(x, y, tc(), 24, .18, 1); if (clean) rays.push({x, y, rot:Math.random(), life:1, col:wc}); }
+  popScore(x, w.getBoundingClientRect().top - 8, "+" + (G.score - G.wordScore));
+  sfxWord(CHORDS[A.ctx ? curBar(A.ctx.currentTime) : 0]);
+  G.wordsDone++; G.idx++; G.state = "swap"; w.classList.add("out");
+  setTimeout(() => { if (G.state !== "swap") return; G.state = "play"; loadWord(); }, G.mode === "sprint" ? 70 : 200);
+}
+function timeoutWord(){
+  const e = G.cur; G.missed[e.w] = e; addWrong(e);
+  G.err++; setCombo(0); sfxError(); flash("err"); FX.shake = 16; toast("超时：" + e.w + " · " + e.zh);
+  if (!G.requeued[e.w]) { G.requeued[e.w] = 1; G.queue.push(e); G.total++; }
+  G.idx++; loadWord(); hud();
+}
+function wpmNow(){ const m = (performance.now() - G.startT) / 60000; return m > 0.02 ? Math.round(G.ok / 5 / m) : 0; }
+function accNow(){ const n = G.ok + G.err; return n ? Math.round(G.ok / n * 100) : 100; }
+function hud(){
+  $("score").textContent = G.score || 0; $("acc").textContent = accNow() + "%";
+  if (G.mode !== "sprint") { $("prog").style.width = (G.total ? G.idx / G.total * 100 : 0) + "%"; $("left").textContent = Math.min(G.idx + 1, G.total || 1) + " / " + (G.total || 0); }
+}
+function tick(){
+  const now = performance.now();
+  if (now - G.lastSample >= 1000) { G.lastSample = now; const w = wpmNow(); G.samples.push(w); $("wpm").textContent = w; }
+  if (G.mode === "sprint") { const left = SPRINT_SECS - (now - G.startT) / 1000; $("prog").style.width = Math.max(0, left / SPRINT_SECS * 100) + "%"; $("left").textContent = Math.max(0, Math.ceil(left)) + " 秒"; if (left <= 0) finish(); }
+  else if (G.mode === "rhythm" && G.cur) { const k = 1 - (now - G.wordT) / G.limitMs; $("limit").firstElementChild.style.transform = "scaleX(" + Math.max(0, k) + ")"; if (k <= 0) timeoutWord(); }
+}
+function finish(){
+  if (G.state === "result") return;
+  const wpm = wpmNow(), acc = accNow(), beat = G.judged ? Math.round((G.perfect + G.good) / G.judged * 100) : 0;
+  G.state = "result"; musicStop(); speechStop(); setTier(0);
+  store.set("wrong", wrongBook);
+  let rank = acc >= 97 ? "S" : acc >= 93 ? "A" : acc >= 85 ? "B" : "C";
+  if (rank === "S" && ((G.mode === "rhythm" && beat < 60) || (G.mode === "sprint" && wpm < 50) || (G.mode === "dictation" && G.hints > 0))) rank = "A";
+  const key = "best." + G.mode + "." + G.list, old = store.get(key, null), isBest = !old || G.score > old.score;
+  if (isBest) store.set(key, {score:G.score, wpm, acc});
+  const missed = Object.values(G.missed);
+  const canNext = G.chapter >= 0 && G.mode !== "sprint" && acc >= 85;
+  if (canNext) { passed[G.scope] = Math.max(passed[G.scope] || 0, G.chapter + 1); store.set("passed", passed); }
+  const hasNext = canNext && G.chapter + 1 < chapCount(G.list);
+  const nums = [["得分", G.score], ["WPM", wpm], ["准确率", acc, "%"], ["最高连击", G.maxCombo], ["完成词条", G.wordsDone]];
+  if (G.mode === "rhythm") nums.push(["踩点率", beat, "%"]);
+  if (G.mode === "dictation") nums.push(["用了提示", G.hints, "次"]);
+  $("card").innerHTML = `
+    <div class="rank">${rank}</div>
+    <div class="sum"><h2>${MODE_NAMES[G.mode]} · ${LIST_NAMES[G.list]}</h2>
+      <p>${isBest ? "新纪录。" : "最佳 " + old.score + " 分。"}${missed.length ? " 有 " + missed.length + " 个词出过错，已记入错词本。" : " 全部一次拼对。"}</p></div>
+    <div class="nums">${nums.map(n => `<div class="num"><span>${n[0]}</span><b>${n[1]}${n[2] ? "<small>" + n[2] + "</small>" : ""}</b></div>`).join("")}</div>
+    <div class="chart"><p>速度曲线（WPM / 秒）</p><canvas id="chart"></canvas></div>
+    ${missed.length ? `<div class="miss"><h3>需要再练</h3><ul>${missed.map(e => `<li><b>${e.w}</b>${e.zh}</li>`).join("")}</ul></div>` : ""}
+    <div class="acts">${hasNext ? '<button class="start" id="nextBtn">下一章 <kbd>Enter</kbd></button><button class="ghost" id="againBtn">再练本章</button>' : '<button class="start" id="againBtn">再来一局 <kbd>Enter</kbd></button>'}<button class="ghost" id="homeBtn">返回 <kbd>Esc</kbd></button></div>`;
+  G.primary = hasNext ? () => { chaps[G.scope] = G.chapter + 1; store.set("ch", chaps); startGame(); } : startGame;
+  if (hasNext) $("nextBtn").onclick = G.primary;
+  $("againBtn").onclick = startGame; $("homeBtn").onclick = goHome;
+  show("result"); drawChart(G.samples);
+}
+function drawChart(d){
+  const c = $("chart"), w = c.clientWidth, h = c.clientHeight, g = c.getContext("2d");
+  c.width = w * DPR; c.height = h * DPR; g.scale(DPR, DPR);
+  if (d.length < 2) { g.fillStyle = TH.muted; g.font = "13px sans-serif"; g.fillText("时间太短，没有曲线", 0, h / 2); return; }
+  const max = Math.max(20, ...d) * 1.15, px = i => 34 + i / (d.length - 1) * (w - 44), py = v => h - 18 - v / max * (h - 30);
+  g.font = "11px " + getComputedStyle(document.body).fontFamily; g.fillStyle = TH.muted; g.strokeStyle = `rgba(${TH.line},.1)`; g.lineWidth = 1;
+  const top = Math.round(Math.max(...d));
+  for (const v of [0, top]) { g.beginPath(); g.moveTo(34, py(v)); g.lineTo(w - 10, py(v)); g.stroke(); g.fillText(v, 0, py(v) + 4); }
+  g.beginPath(); d.forEach((v, i) => i ? g.lineTo(px(i), py(v)) : g.moveTo(px(i), py(v)));
+  g.strokeStyle = `rgb(${TIER_COL[0]})`; g.lineWidth = 2; g.lineJoin = "round"; g.stroke();
+  g.lineTo(px(d.length - 1), h - 18); g.lineTo(px(0), h - 18); g.closePath();
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, `rgba(${TIER_COL[0]},.28)`); gr.addColorStop(1, `rgba(${TIER_COL[0]},0)`); g.fillStyle = gr; g.fill();
+  g.fillStyle = `rgb(${TH.gold})`; g.beginPath(); g.arc(px(d.length - 1), py(d[d.length - 1]), 4, 0, 6.283); g.fill();
+}
+function goHome(){ G.state = "home"; musicStop(); speechStop(); setTier(0); $("count").classList.remove("on"); store.set("wrong", wrongBook); renderHome(); show("home"); }
+
+/* ================= home ================= */
+function renderHome(){
+  const wl = wrongList();
+  if (cfg.list === "wrong" && wl.length < 3) { cfg.list = "cet4"; cfg.kind = "word"; }
+  const items = LISTS.filter(l => l[2] === cfg.kind); let html = "", lv = 0, sep = false;
+  for (const l of items) { if (l[3] && !sep) { html += '<span class="sep"></span>'; sep = true; }
+    html += `<button class="chip" data-v="${l[0]}">${l[3] ? "" : `<span class="lv">Lv${++lv}</span>`}${l[1]}</button>`; }
+  if (wl.length >= 3) html += `<span class="sep"></span><button class="chip" data-v="wrong">错词本 ${wl.length}</button>`;
+  $("lists").innerHTML = html;
+  const so = SUBS[cfg.list], cur = subOf(cfg.list);
+  $("subs").innerHTML = so ? so.map(x => `<button class="chip" data-v="${x[0]}" aria-pressed="${x === cur}">${x[1]}</button>`).join("") : "";
+  $("subs").style.display = so ? "" : "none";
+  $("themes").innerHTML = Object.keys(THEMES).map(k => `<button class="chip" data-v="${k}"><span class="sw" style="background:rgb(${THEMES[k].tiers[0]})"></span>${THEMES[k].name}</button>`).join("");
+  const press = (sel, v) => { for (const b of document.querySelectorAll(sel)) b.setAttribute("aria-pressed", b.dataset.v === String(v)); };
+  press("#modes .mode", cfg.mode); press("#kinds .chip", cfg.kind); press("#lists .chip", cfg.list); press("#bpms .chip", cfg.bpm); press("#themes .chip", cfg.theme);
+  $("optSpeak").setAttribute("aria-pressed", cfg.speak); $("optMusic").setAttribute("aria-pressed", cfg.music);
+  press("#accents .chip", cfg.accent); press("#sources .chip", cfg.source); renderVoices();
+  const best = store.get("best." + cfg.mode + "." + cfg.list, null);
+  $("best").innerHTML = best ? `${MODE_NAMES[cfg.mode]} · ${LIST_NAMES[cfg.list]} 最佳 <b>${best.score}</b> 分，<b>${best.wpm}</b> WPM，准确率 <b>${best.acc}%</b>` : `${MODE_NAMES[cfg.mode]} · ${LIST_NAMES[cfg.list]} 还没有记录`;
+  store.set("cfg", cfg); renderChap();
+  const k = cfg.list; ensureList(k).then(() => { if (cfg.list === k && G.state === "home") renderChap(); });
+}
+function renderChap(){
+  const k = cfg.list, n = listEntries(k).length, unit = cfg.kind === "phrase" && k !== "wrong" ? "条" : "词";
+  if (k === "wrong") { $("chap").innerHTML = `共 ${n} 个待复习，全部随机出现`; return; }
+  const full = !!FULL[k], total = chapCount(k), done = passed[scope(k)] || 0, sb = subOf(k);
+  $("chap").innerHTML = `<span>${sb && sb[2] && full ? "人教 PEP " + sb[1] + " · " + sb[2] + " · " : ""}${full ? "共 " + n + " " + unit : loading[k + "!"] ? "未找到完整词库（data 文件夹），使用内置 " + n + " " + unit : "词库加载中…"}</span>` +
+    (cfg.order === "chapter" ? `<button class="nav" id="chPrev" aria-label="上一章">‹</button><b>第 ${chapOf(k) + 1} / ${total} 章</b><button class="nav" id="chNext" aria-label="下一章">›</button>` : "") +
+    `<button class="chip" id="chOrder" aria-pressed="${cfg.order === "random"}">全库随机</button>` + (done ? `<span>已通过 ${done} 章</span>` : "");
+  if ($("chPrev")) { $("chPrev").onclick = () => stepChap(-1); $("chNext").onclick = () => stepChap(1); }
+  $("chOrder").onclick = () => { cfg.order = cfg.order === "random" ? "chapter" : "random"; store.set("cfg", cfg); renderChap(); };
+}
+function stepChap(d){
+  const k = cfg.list; if (k === "wrong" || cfg.order !== "chapter") return;
+  chaps[scope(k)] = Math.max(0, Math.min(chapCount(k) - 1, chapOf(k) + d)); store.set("ch", chaps); renderChap();
+}
+function pick(sel, fn){ $(sel).addEventListener("click", e => { const b = e.target.closest("[data-v]"); if (!b) return; fn(b.dataset.v); renderHome(); b.blur(); }); }
+pick("modes", v => cfg.mode = v); pick("lists", v => cfg.list = v); pick("bpms", v => cfg.bpm = +v);
+pick("subs", v => cfg.sub = v);
+pick("accents", v => { cfg.accent = v; for (const k in preAudio) delete preAudio[k]; });
+pick("sources", v => { cfg.source = v; if (v === "auto") remoteFail = false; });
+function renderVoices(){
+  const sel = $("voiceSel"); if (!sel) return; const auto = autoVoice();
+  sel.innerHTML = `<option value="">自动${auto ? "（" + auto.name + "）" : ""}</option>` + voices.map(v => `<option value="${v.name.replace(/"/g, "&quot;")}">${v.name} · ${v.lang}</option>`).join("");
+  sel.value = voices.some(v => v.name === cfg.voice) ? cfg.voice : "";
+}
+$("voiceSel").onchange = e => { cfg.voice = e.target.value; store.set("cfg", cfg); };
+$("voiceTry").onclick = () => { audioInit(); speak("tiger", true); };
+pick("kinds", v => { if (v !== cfg.kind) { cfg.kind = v; cfg.list = v === "phrase" ? "p1" : "cet4"; } });
+pick("themes", v => { cfg.theme = v; applyTheme(v); });
+$("optSpeak").onclick = () => { cfg.speak = !cfg.speak; renderHome(); };
+$("optMusic").onclick = () => { cfg.music = !cfg.music; renderHome(); };
+$("startBtn").onclick = startGame;
+
+/* ================= input ================= */
+function letterOf(e){
+  if (e.key === " " || e.code === "Space") return " ";
+  if (e.key === "-" || e.key === "'" || e.key === ".") return e.key;
+  if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) return e.key.toLowerCase();
+  if (/^Key[A-Z]$/.test(e.code)) return e.code[3].toLowerCase(); // IME is on: fall back to the physical key
+  return "";
+}
+addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (G.state === "home") {
+    if (e.key === "Enter" && !(document.activeElement && document.activeElement.tagName === "BUTTON")) { e.preventDefault(); startGame(); }
+    else if ("123".includes(e.key) && e.key) { cfg.mode = ["rhythm","sprint","dictation"][+e.key - 1]; renderHome(); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowRight") stepChap(e.key === "ArrowLeft" ? -1 : 1);
+    return;
+  }
+  if (G.state === "result") { if (e.key === "Enter") { e.preventDefault(); (G.primary || startGame)(); } else if (e.key === "Escape") goHome(); return; }
+  if (e.key === "Escape") { goHome(); return; }
+  if (G.state !== "play") { e.preventDefault(); return; }
+  if (e.key === "Tab") { e.preventDefault(); speak(G.cur.w, true); return; }
+  if (e.key === "Enter") { e.preventDefault(); if (G.mode === "dictation") { G.hints++; miss(true); } return; }
+  if (e.repeat) return;
+  const c = letterOf(e); if (!c) return;
+  e.preventDefault();
+  if (e.key === "Process" || e.isComposing) toast("检测到中文输入法，建议切换到英文");
+  if (c === G.cur.w[G.pos].toLowerCase()) hit(); else miss(false);
+});
+// without audio, drive the beat from the wall clock
+const _beatNow = beatNow;
+beatNow = function(){ return A.ctx && A.timer ? _beatNow() : (G.state === "count" || G.state === "play" || G.state === "swap") ? (performance.now() - fakeT0) / (60000 / cfg.bpm) : performance.now() / 545; };
+applyTheme(cfg.theme);
+renderHome();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
