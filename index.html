@@ -893,7 +893,9 @@ function ensureList(k){
   return loading[k];
 }
 // lists that are split into textbook volumes; the edition tag says which printing the words follow
-const SUBS = {primary:[["all","全部"],["3a","三上","2024 秋新版"],["3b","三下","2025 春新版"],["4a","四上","2024 新版"],["4b","四下","2024 新版"],["5a","五上","2024 新版"],["5b","五下","2014 旧版"],["6a","六上","2024 新版"],["6b","六下","2014 旧版"]]};
+const SUBS = {primary:[["all","全部"],["3a","三上","2024 秋新版"],["3b","三下","2025 春新版"],["4a","四上","2024 新版"],["4b","四下","2024 新版"],["5a","五上","2024 新版"],["5b","五下","2014 旧版"],["6a","六上","2024 新版"],["6b","六下","2014 旧版"]],
+  junior:[["all","全部"],["7a","七上","教材词汇表"],["7b","七下","教材词汇表"],["8a","八上","教材词汇表"],["8b","八下","教材词汇表"],["9a","九上","教材词汇表"],["extra","补充","教材以外的初中词"]]};
+const SUB_BRAND = {primary:"人教 PEP ", junior:"人教版 "};
 const subCache = {};
 function subOf(k){ const o = SUBS[k]; if (!o) return null; return o.find(x => x[0] === cfg.sub) || o[0]; }
 function scope(k){ const sb = subOf(k); return sb && sb[0] !== "all" ? k + ":" + sb[0] : k; }
@@ -1450,7 +1452,7 @@ function renderChap(){
   $("envNote").hidden = !(loading[k + "!"] && location.protocol !== "file:");
   if (k === "wrong") { $("chap").innerHTML = `共 ${n} 个到期或出过错的词，随机抽 20 个`; return; }
   const full = !!FULL[k], total = chapCount(k), done = passed[scope(k)] || 0, sb = subOf(k);
-  $("chap").innerHTML = `<span>${sb && sb[2] && full ? "人教 PEP " + sb[1] + " · " + sb[2] + " · " : ""}${full ? "共 " + n + " " + unit : loading[k + "!"] ? "未找到完整词库（data 文件夹），使用内置 " + n + " " + unit : "词库加载中…"}</span>` +
+  $("chap").innerHTML = `<span>${sb && sb[2] && full ? (sb[0] === "extra" ? "" : SUB_BRAND[k] || "") + sb[1] + " · " + sb[2] + " · " : ""}${full ? "共 " + n + " " + unit : loading[k + "!"] ? "未找到完整词库（data 文件夹），使用内置 " + n + " " + unit : "词库加载中…"}</span>` +
     (cfg.order === "chapter" ? `<button class="nav" id="chPrev" aria-label="上一章">‹</button><b>${chapsOf(k).byUnit ? chapLabel(k, chapOf(k)) + " / 共 " + total + " 单元" : "第 " + (chapOf(k) + 1) + " / " + total + " 章"}</b><button class="nav" id="chNext" aria-label="下一章">›</button>` : "") +
     `<button class="chip" id="chOrder" aria-pressed="${cfg.order === "random"}">全库随机</button>` + (done ? `<span>已通过 ${done} 章</span>` : "");
   if ($("chPrev")) { $("chPrev").onclick = () => stepChap(-1); $("chNext").onclick = () => stepChap(1); }
