@@ -115,7 +115,21 @@ with open(PEPCSV, encoding="utf-8-sig", newline="") as fh:
         primary.append((w, ipa, zh, vol, unit))
         if " " in w:
             pvol_phr.append((w, ipa, zh))
-junior = junior_words(words(cz), primary + words(xx))
+junior_extra = junior_words(words(cz), primary + words(xx))
+
+# Junior textbook volumes (7a..9a), transcribed from each book's Vocabulary appendix.
+# Within a volume, entries follow textbook page order so chapters follow the lessons.
+JVOLS = ["7a", "7b", "8a", "8b", "9a"]
+junior_book, junior_phr = [], []
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pep-junior-vocab.tsv"), encoding="utf-8") as fh:
+    rows = [l.rstrip("\n").split("\t") for l in fh if l.strip() and not l.startswith("#")]
+rows.sort(key=lambda r: (JVOLS.index(r[0]), int(r[1])))
+for vol, page, w, ipa, zh in rows:
+    junior_book.append((w, ipa, zh, vol))
+    if " " in w:
+        junior_phr.append((w, ipa, zh))
+book_keys = {re.sub(r"[^a-z]", "", it[0].lower()) for it in junior_book}
+junior = junior_book + [it + ("extra",) for it in junior_extra if re.sub(r"[^a-z]", "", it[0].lower()) not in book_keys]
 
 lists = {
     "primary": primary,
@@ -129,7 +143,7 @@ lists = {
     "dev": dedupe(words(entries(["it-words.json"]))),
     "med": dedupe(words(entries(["BIOmedical.json"]))),
     "p1": dedupe(pvol_phr + phrases(xx)),
-    "p2": dedupe(phrases(cz)),
+    "p2": dedupe(junior_phr + phrases(cz)),
     "p3": dedupe(phrases(gz)),
     "p4": dedupe(phrases(entries(["Common-Phrases-FCE-Unofficial.json", "Common-Phrases-PTE-Unofficial.json"]))),
     "p5": dedupe(phrases(entries(["IELTS_WANG_5.json"]))),
