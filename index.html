@@ -56,6 +56,9 @@ kbd{font-family:var(--mono);font-size:.78em;padding:.15em .5em;border:1px solid 
 .lede{color:var(--muted);line-height:1.75;margin:0;max-width:34em;font-size:15px}
 .runner-preview{width:min(180px,45vw);aspect-ratio:1;border-radius:18px;object-fit:cover;background:#0a0b13}
 .runner-preview[hidden]{display:none}
+.runner-promo[hidden]{display:none}
+.runner-promo summary{cursor:pointer;color:var(--accent);font-size:14px}
+.runner-promo video{display:block;width:min(270px,100%);max-height:42vh;margin-top:12px;border-radius:14px;background:#0a0b13}
 .start{align-self:flex-start;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.08em;
   padding:16px 28px;border-radius:999px;background:var(--text);color:var(--ink);display:flex;gap:14px;align-items:center;
   transition:transform .15s,box-shadow .15s}
@@ -255,6 +258,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
     <h1 class="mark">键拍<span>KEYBEAT</span></h1>
     <p class="lede">跟着鼓点敲单词和短语。每一次按键都是一个音符，连击越高，音乐越满。从小学到雅思，看释义、听发音、把拼写敲进手指里。</p>
     <video id="runnerPreview" class="runner-preview" muted playsinline loop preload="none" aria-hidden="true" hidden></video>
+    <details id="runnerPromo" class="runner-promo" hidden><summary>观看 NABO 跑酷宣传片</summary><video id="promoVideo" controls playsinline preload="none" aria-label="NABO 跑酷宣传片"></video></details>
     <div class="go"><button class="start" id="startBtn">开始 <kbd>Enter</kbd></button><button class="ghost" id="dailyBtn">每日挑战</button></div>
     <div class="best" id="best"></div>
     <button class="me" id="meBtn" aria-label="打开我的档案"><span class="ava" id="ava"></span><b id="meName"></b><span class="side"><strong id="meToday"></strong><span id="meGoal"></span></span><small id="meSub"></small></button>
@@ -1242,6 +1246,9 @@ const SPRINT_SECS = 45;
 function show(id){ for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); if (id !== "result") { const v = $("card").querySelector("video"); if (v) v.pause(); } syncRunnerPreview(); }
 function syncRunnerPreview(){
   const v = $("runnerPreview"), visible = G.state === "home" && cfg.mode === "run" && !reduced;
+  const promo = $("runnerPromo"), showPromo = G.state === "home" && cfg.mode === "run";
+  promo.hidden = !showPromo;
+  if (!showPromo) { $("promoVideo").pause(); promo.open = false; }
   v.hidden = !visible;
   if (!visible) { v.pause(); return; }
   v.onerror = () => { v.hidden = true; };
@@ -1612,6 +1619,7 @@ pick("themes", v => { cfg.theme = v; applyTheme(v); });
 $("optSpeak").onclick = () => { cfg.speak = !cfg.speak; renderHome(); };
 $("optMusic").onclick = () => { cfg.music = !cfg.music; renderHome(); };
 $("startBtn").onclick = () => startGame();
+$("runnerPromo").addEventListener("toggle", () => { const v = $("promoVideo"); if ($("runnerPromo").open) { if (!v.getAttribute("src")) v.src = "assets/run/video/promo.mp4"; } else v.pause(); });
 $("dailyBtn").onclick = () => startGame(true);
 $("meBtn").onclick = openMe;
 
