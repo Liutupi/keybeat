@@ -54,6 +54,8 @@ kbd{font-family:var(--mono);font-size:.78em;padding:.15em .5em;border:1px solid 
 .mark{font-family:var(--display);font-weight:800;font-size:clamp(44px,7.5vw,88px);line-height:.95;letter-spacing:-.02em;margin:0;text-shadow:0 0 70px color-mix(in srgb,var(--accent) 55%,transparent)}
 .mark span{display:block;font-size:.3em;font-weight:400;letter-spacing:.42em;color:var(--accent);margin-top:.9em}
 .lede{color:var(--muted);line-height:1.75;margin:0;max-width:34em;font-size:15px}
+.runner-preview{width:min(180px,45vw);aspect-ratio:1;border-radius:18px;object-fit:cover;background:#0a0b13}
+.runner-preview[hidden]{display:none}
 .start{align-self:flex-start;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.08em;
   padding:16px 28px;border-radius:999px;background:var(--text);color:var(--ink);display:flex;gap:14px;align-items:center;
   transition:transform .15s,box-shadow .15s}
@@ -220,6 +222,8 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
 .rank{font-family:var(--display);font-weight:800;font-size:clamp(96px,18vw,190px);line-height:.85;color:var(--gold);text-shadow:0 0 60px color-mix(in srgb,var(--gold) 50%,transparent)}
 .sum h2{font-family:var(--display);font-weight:600;font-size:20px;margin:0 0 6px}
 .sum p{margin:0;color:var(--muted);font-size:14px}
+.result-video{grid-column:1/-1;width:min(220px,100%);aspect-ratio:1;object-fit:cover;border-radius:18px;background:#0a0b13;justify-self:center}
+@media (prefers-reduced-motion:reduce){.runner-preview,.result-video{display:none}}
 .nums{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px}
 .num{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
 .num span{font-size:11px;letter-spacing:.2em;color:var(--muted)}
@@ -250,6 +254,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
   <div class="brand">
     <h1 class="mark">键拍<span>KEYBEAT</span></h1>
     <p class="lede">跟着鼓点敲单词和短语。每一次按键都是一个音符，连击越高，音乐越满。从小学到雅思，看释义、听发音、把拼写敲进手指里。</p>
+    <video id="runnerPreview" class="runner-preview" muted playsinline loop preload="none" aria-hidden="true" hidden></video>
     <div class="go"><button class="start" id="startBtn">开始 <kbd>Enter</kbd></button><button class="ghost" id="dailyBtn">每日挑战</button></div>
     <div class="best" id="best"></div>
     <button class="me" id="meBtn" aria-label="打开我的档案"><span class="ava" id="ava"></span><b id="meName"></b><span class="side"><strong id="meToday"></strong><span id="meGoal"></span></span><small id="meSub"></small></button>
@@ -1234,7 +1239,15 @@ function onBeat(bi){
 /* ================= game ================= */
 const G = {state:"home", mode:"rhythm"};
 const SPRINT_SECS = 45;
-function show(id){ for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); }
+function show(id){ for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); if (id !== "result") { const v = $("card").querySelector("video"); if (v) v.pause(); } syncRunnerPreview(); }
+function syncRunnerPreview(){
+  const v = $("runnerPreview"), visible = G.state === "home" && cfg.mode === "run" && !reduced;
+  v.hidden = !visible;
+  if (!visible) { v.pause(); return; }
+  v.onerror = () => { v.hidden = true; };
+  if (!v.getAttribute("src")) v.src = "assets/run/video/home-loop.mp4";
+  const play = v.play(); if (play) play.catch(() => {});
+}
 let wantDaily = false;
 function seeded(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function startGame(daily){
@@ -1477,6 +1490,7 @@ function finish(){
     <div class="rank">${rank}</div>
     <div class="sum"><h2>${G.daily ? "每日挑战" : MODE_NAMES[G.mode]} · ${LIST_NAMES[G.list]}</h2>
       <p>${G.mode === "run" ? (R.lives > 0 ? "NABO 跑完了全程。" : "NABO 摔倒了。") : ""}${isBest ? "新纪录。" : "最佳 " + old.score + " 分。"}${missed.length ? " 有 " + missed.length + " 个词出过错，已记入错词本。" : " 全部一次拼对。"}</p></div>
+    ${G.mode === "run" && !reduced ? `<video class="result-video" muted playsinline preload="metadata" aria-hidden="true" src="assets/run/video/${R.lives > 0 ? "win" : "fail"}.mp4"></video>` : ""}
     ${gainHtml}
     <div class="nums">${nums.map(n => `<div class="num"><span>${n[0]}</span><b>${n[1]}${n[2] ? "<small>" + n[2] + "</small>" : ""}</b></div>`).join("")}</div>
     <div class="chart"><p>速度曲线（WPM / 秒）</p><canvas id="chart"></canvas></div>
@@ -1486,7 +1500,7 @@ function finish(){
   G.primary = hasNext ? () => { chaps[G.scope] = G.chapter + 1; store.set("ch", chaps); startGame(); } : again;
   if (hasNext) $("nextBtn").onclick = G.primary;
   $("againBtn").onclick = again; $("homeBtn").onclick = goHome;
-  show("result"); drawChart(G.samples);
+  show("result"); const video = $("card").querySelector("video"); if (video) { video.onerror = () => { video.hidden = true; }; const play = video.play(); if (play) play.catch(() => {}); } drawChart(G.samples);
 }
 function drawChart(d){
   const c = $("chart"), w = c.clientWidth, h = c.clientHeight, g = c.getContext("2d");
@@ -1506,6 +1520,7 @@ function goHome(){ G.state = "home"; musicStop(); speechStop(); setTier(0); $("c
 
 /* ================= home ================= */
 function renderHome(){
+  syncRunnerPreview();
   const wl = wrongList();
   if (cfg.list === "wrong" && wl.length < 1) { cfg.list = "cet4"; cfg.kind = "word"; }
   const items = LISTS.filter(l => l[2] === cfg.kind); let html = "", lv = 0, sep = false;
