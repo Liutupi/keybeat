@@ -54,6 +54,11 @@ kbd{font-family:var(--mono);font-size:.78em;padding:.15em .5em;border:1px solid 
 .mark{font-family:var(--display);font-weight:800;font-size:clamp(44px,7.5vw,88px);line-height:.95;letter-spacing:-.02em;margin:0;text-shadow:0 0 70px color-mix(in srgb,var(--accent) 55%,transparent)}
 .mark span{display:block;font-size:.3em;font-weight:400;letter-spacing:.42em;color:var(--accent);margin-top:.9em}
 .lede{color:var(--muted);line-height:1.75;margin:0;max-width:34em;font-size:15px}
+.runner-preview{width:min(180px,45vw);aspect-ratio:1;border-radius:18px;object-fit:cover;background:#0a0b13}
+.runner-preview[hidden]{display:none}
+.runner-promo[hidden]{display:none}
+.runner-promo summary{cursor:pointer;color:var(--accent);font-size:14px}
+.runner-promo video{display:block;width:min(270px,100%);max-height:42vh;margin-top:12px;border-radius:14px;background:#0a0b13}
 .start{align-self:flex-start;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.08em;
   padding:16px 28px;border-radius:999px;background:var(--text);color:var(--ink);display:flex;gap:14px;align-items:center;
   transition:transform .15s,box-shadow .15s}
@@ -163,6 +168,10 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
 @keyframes bump{50%{transform:scale(1.35);color:var(--gold)}}
 .mult{color:var(--gold);font-size:.55em;margin-left:.4em}
 .keys{text-align:center;font-size:12px;color:var(--muted);margin-top:14px;display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+#runway{display:none;width:min(760px,100%);height:120px}
+.run #runway{display:block}
+.run #limit,.run #lane,.run #judge,.run #next{display:none}
+.touch #runway{height:92px}
 #quitBtn{display:none;padding:6px 14px;border:1px solid var(--line);border-radius:999px;color:var(--text);font-size:13px}
 #pad{display:none;flex-direction:column;gap:6px;padding-top:10px;user-select:none;-webkit-user-select:none;touch-action:manipulation;width:100%;max-width:640px;margin:0 auto}
 #pad.on{display:flex}
@@ -216,6 +225,8 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
 .rank{font-family:var(--display);font-weight:800;font-size:clamp(96px,18vw,190px);line-height:.85;color:var(--gold);text-shadow:0 0 60px color-mix(in srgb,var(--gold) 50%,transparent)}
 .sum h2{font-family:var(--display);font-weight:600;font-size:20px;margin:0 0 6px}
 .sum p{margin:0;color:var(--muted);font-size:14px}
+.result-video{grid-column:1/-1;width:min(220px,100%);aspect-ratio:1;object-fit:cover;border-radius:18px;background:#0a0b13;justify-self:center}
+@media (prefers-reduced-motion:reduce){.runner-preview,.result-video{display:none}}
 .nums{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px}
 .num{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
 .num span{font-size:11px;letter-spacing:.2em;color:var(--muted)}
@@ -246,6 +257,8 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
   <div class="brand">
     <h1 class="mark">键拍<span>KEYBEAT</span></h1>
     <p class="lede">跟着鼓点敲单词和短语。每一次按键都是一个音符，连击越高，音乐越满。从小学到雅思，看释义、听发音、把拼写敲进手指里。</p>
+    <video id="runnerPreview" class="runner-preview" muted playsinline loop preload="none" aria-hidden="true" hidden></video>
+    <details id="runnerPromo" class="runner-promo" hidden><summary>观看 NABO 跑酷宣传片</summary><video id="promoVideo" controls playsinline preload="none" aria-label="NABO 跑酷宣传片"></video></details>
     <div class="go"><button class="start" id="startBtn">开始 <kbd>Enter</kbd></button><button class="ghost" id="dailyBtn">每日挑战</button></div>
     <div class="best" id="best"></div>
     <button class="me" id="meBtn" aria-label="打开我的档案"><span class="ava" id="ava"></span><b id="meName"></b><span class="side"><strong id="meToday"></strong><span id="meGoal"></span></span><small id="meSub"></small></button>
@@ -262,6 +275,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
         <button class="mode" data-v="sprint"><i>2</i><strong>竞速</strong><small>限时 45 秒，尽可能多地敲，测你的 WPM。</small></button>
         <button class="mode" data-v="dictation"><i>3</i><strong>听写</strong><small>只给发音和中文，凭记忆拼出来。</small></button>
         <button class="mode" data-v="spell"><i>4</i><strong>拼词</strong><small>听发音、看中文，点字母块把词拼出来。手机上单手就能玩。</small></button>
+        <button class="mode" data-v="run"><i>5</i><strong>NABO 跑酷</strong><small>字母障碍迎面而来，在撞上之前打出来。三条命，越跑越快。</small></button>
       </div>
     </div>
     <div class="group">
@@ -316,6 +330,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
     <button id="quitBtn">退出</button>
   </div>
   <div class="stage">
+    <canvas id="runway"></canvas>
     <div class="zh" id="zh"></div>
     <div class="word" id="word"></div>
     <div class="ipa" id="ipa"></div>
@@ -919,7 +934,7 @@ function chapsOf(k){
 }
 function chapCount(k){ return chapsOf(k).length; }
 function chapLabel(k, c){ const cs = chapsOf(k); return cs.byUnit ? "Unit " + cs.byUnit[c] : "第 " + (c + 1) + " 章"; }
-const MODE_NAMES = {rhythm:"节奏",sprint:"竞速",dictation:"听写",spell:"拼词"};
+const MODE_NAMES = {rhythm:"节奏",sprint:"竞速",dictation:"听写",spell:"拼词",run:"跑酷"};
 const TOUCH = matchMedia("(pointer: coarse)").matches;
 if (TOUCH) document.documentElement.classList.add("touch");
 const hid = () => G.mode === "dictation" || G.mode === "spell";
@@ -1212,6 +1227,7 @@ function frame(){
   if (A.an && A.timer) { A.an.getByteFrequencyData(freq); const n = 48, bw = W / n;
     for (let i = 0; i < n; i++) { const v = freq[i + 1] / 255, h = v * v * H * .16; cx.fillStyle = `rgba(${tc()},${.06 + v * .2})`; cx.fillRect(i * bw + 1, H - h, bw - 2, h); } }
   cx.globalCompositeOperation = "source-over";
+  if (G.mode === "run" && (G.state === "count" || G.state === "play" || G.state === "swap")) runTick(performance.now());
   if (G.state === "play") tick();
   requestAnimationFrame(frame);
 }
@@ -1227,7 +1243,18 @@ function onBeat(bi){
 /* ================= game ================= */
 const G = {state:"home", mode:"rhythm"};
 const SPRINT_SECS = 45;
-function show(id){ for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); }
+function show(id){ for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); if (id !== "result") { const v = $("card").querySelector("video"); if (v) v.pause(); } syncRunnerPreview(); }
+function syncRunnerPreview(){
+  const v = $("runnerPreview"), visible = G.state === "home" && cfg.mode === "run" && !reduced;
+  const promo = $("runnerPromo"), showPromo = G.state === "home" && cfg.mode === "run";
+  promo.hidden = !showPromo;
+  if (!showPromo) { $("promoVideo").pause(); promo.open = false; }
+  v.hidden = !visible;
+  if (!visible) { v.pause(); return; }
+  v.onerror = () => { v.hidden = true; };
+  if (!v.getAttribute("src")) v.src = "assets/run/video/home-loop.mp4";
+  const play = v.play(); if (play) play.catch(() => {});
+}
 let wantDaily = false;
 function seeded(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function startGame(daily){
@@ -1250,11 +1277,13 @@ function beginGame(){
   if (G.daily) G.mode = "rhythm";
   if (G.mode === "rhythm") G.queue = pool.slice(0, byChap ? 40 : 20);
   else if (G.mode === "spell") G.queue = pool.slice(0, byChap ? 40 : 20);
+  else if (G.mode === "run") G.queue = pool.slice(0, 40);
   else if (G.mode === "dictation") G.queue = pool.slice(0, 12);
   else { G.queue = pool; while (G.queue.length < 240) G.queue = G.queue.concat(shuffle(pool)); }
   G.total = G.queue.length;
   G.scope = scope(cfg.list); const sbn = subOf(cfg.list);
   $("where").textContent = MODE_NAMES[G.mode] + " · " + LIST_NAMES[G.list] + (sbn && sbn[0] !== "all" ? sbn[1] : "") + (G.daily ? " · 每日挑战" : "") + (G.chapter >= 0 ? " · " + chapLabel(cfg.list, G.chapter) : "");
+  $("play").classList.toggle("run", G.mode === "run"); if (G.mode === "run") runReset();
   $("limit").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
   $("lane").style.visibility = $("judge").style.visibility = G.mode === "rhythm" ? "visible" : "hidden";
   $("hintKey").style.display = hid() ? "" : "none";
@@ -1276,7 +1305,7 @@ function loadWord(){
   $("zh").textContent = e.zh;
   $("ipa").textContent = G.mode === "spell" ? "听发音，按顺序点字母块" : hid() ? (e.phrase ? "听发音，拼出这个短语（空格也要敲）" : "听发音，拼出这个词") : e.ipa ? "/" + e.ipa + "/" : "短语 · 空格也要敲";
   $("next").textContent = hid() ? "" : G.queue.slice(G.idx + 1, G.idx + (e.phrase ? 2 : 4)).map(x => x.w).join("   ");
-  updatePad(); markCur(); if (G.mode !== "sprint") { speak(e.w, hid()); const nx = G.queue[G.idx + 1]; if (nx && (cfg.speak || hid())) preload(nx.w); }
+  updatePad(); if (G.mode === "run") runSpawn(); markCur(); if (G.mode !== "sprint") { speak(e.w, hid()); const nx = G.queue[G.idx + 1]; if (nx && (cfg.speak || hid())) preload(nx.w); }
 }
 function markCur(){ const cs = $("word").children; for (let i = 0; i < cs.length; i++) cs[i].classList.toggle("cur", i === G.pos); }
 function centerOf(el){ const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
@@ -1305,6 +1334,7 @@ function judge(){
 }
 function hit(){
   const el = $("word").children[G.pos], e = G.cur, q = G.mode === "rhythm" ? judge() : 0;
+  if (G.mode === "run") runHit();
   if (e.w[G.pos] !== " ") el.textContent = e.w[G.pos]; el.classList.add("done", "pop"); setTimeout(() => el.classList.remove("pop"), 120);
   const ch = CHORDS[A.ctx ? curBar(A.ctx.currentTime) : 0];
   pluck(ch[G.pos % 6] + (G.pos >= 6 ? 12 : 0), q === 2);
@@ -1351,7 +1381,79 @@ function wpmNow(){ const m = (performance.now() - G.startT) / 60000; return m > 
 function accNow(){ const n = G.ok + G.err; return n ? Math.round(G.ok / n * 100) : 100; }
 function hud(){
   $("score").textContent = G.score || 0; $("acc").textContent = accNow() + "%";
-  if (G.mode !== "sprint") { $("prog").style.width = (G.total ? G.idx / G.total * 100 : 0) + "%"; $("left").textContent = Math.min(G.idx + 1, G.total || 1) + " / " + (G.total || 0); }
+  if (G.mode !== "sprint") { $("prog").style.width = (G.total ? G.idx / G.total * 100 : 0) + "%"; $("left").textContent = G.mode === "run" ? Math.round(R.dist) + " 米" : Math.min(G.idx + 1, G.total || 1) + " / " + (G.total || 0); }
+}
+/* ---------- NABO beat runner: letters come at NABO as obstacles; type each one before it arrives ---------- */
+const R = {obs:[], dist:0, lives:3, jump:0, stumble:0, last:0, t:0, img:{}};
+const rw = $("runway"), rx = rw.getContext("2d"), NX = .17;
+// Optional art. Each file is a horizontal strip of square frames; without them a placeholder is drawn.
+for (const k of ["run", "jump", "hit"]) { const im = new Image(); im.onload = () => { R.img[k] = im; }; im.src = "assets/nabo/" + k + ".png"; }
+for (const k of ["bg-far", "bg-near"]) { const im = new Image(); im.onload = () => { R.img[k] = im; }; im.src = "assets/run/" + k + ".png"; }
+function runReset(){ Object.assign(R, {obs:[], dist:0, lives:3, jump:0, stumble:0, last:performance.now(), t:0}); }
+const runV = () => TOUCH ? .2 : .28;   // scroll speed, in runway widths per second
+function runLetterTime(){ return Math.max(TOUCH ? .6 : .32, (TOUCH ? 1.3 : .8) * Math.pow(.97, G.wordsDone)) * 110 / cfg.bpm; }
+function runSpawn(){ const gap = runV() * runLetterTime(); R.obs = [...G.cur.w].map((c, i) => ({c, x:1.02 + i * gap, dead:false})); }
+function runHit(){
+  const o = R.obs[G.pos]; if (!o) return; o.dead = true; R.jump = 1;
+  const r = rw.getBoundingClientRect(); burst(r.left + o.x * r.width, r.top + r.height * .6, 14, tc(), 5);
+}
+function runCrash(){
+  const el = $("word").children[G.pos], o = R.obs[G.pos]; if (o) o.dead = true;
+  R.lives--; R.stumble = 1; G.err++; G.wordErr++; setCombo(0); sfxError(); flash("err"); buzz([30, 50, 30]); FX.shake = 20;
+  G.missed[G.cur.w] = G.cur;
+  if (el) { if (G.cur.w[G.pos] !== " ") el.textContent = G.cur.w[G.pos]; el.classList.add("done"); el.style.color = "var(--hot)"; }
+  G.pos++; G.posErr = 0;
+  if (R.lives <= 0) { learnWord(G.cur, false); addWrong(G.cur); finish(); return; }
+  if (G.pos >= G.cur.w.length) wordDone(); else markCur();
+  hud();
+}
+function runTick(now){
+  const dt = Math.min(.05, (now - R.last) / 1000); R.last = now; R.t += dt;
+  R.jump = Math.max(0, R.jump - dt * 3.2); R.stumble = Math.max(0, R.stumble - dt * 2.2);
+  if (G.state !== "count") {
+    const nx = G.state === "play" ? R.obs[G.pos] : null;
+    const v = runV() * (nx && nx.x > .5 ? 5 : !nx ? 2.5 : 1);     // dash forward when the next letter is still far away
+    for (const o of R.obs) o.x -= v * dt;
+    R.dist += v * dt * 30;
+    if (nx && nx.x <= NX + .035) runCrash();
+  }
+  runDraw();
+}
+function runDraw(){
+  const cw = rw.clientWidth, ch = rw.clientHeight; if (!cw) return;
+  if (rw.width !== Math.round(cw * DPR)) { rw.width = Math.round(cw * DPR); rw.height = Math.round(ch * DPR); }
+  rx.setTransform(DPR, 0, 0, DPR, 0, 0); rx.clearRect(0, 0, cw, ch);
+  const gy = ch * .84, acc = `rgb(${tc()})`, beat = 1 - (beatNow() % 1), scroll = R.dist / 30;
+  if (R.img["bg-far"] || R.img["bg-near"]) { rx.save(); rx.beginPath(); rx.roundRect(0, 0, cw, gy, 10); rx.clip(); rx.globalAlpha = TH.light ? .5 : .9;
+    for (const [k, sp] of [["bg-far", .25], ["bg-near", .6]]) { const im = R.img[k]; if (!im) continue;
+      const w = im.width * gy / im.height, off = (scroll * cw * sp) % w; for (let x = -off; x < cw; x += w) rx.drawImage(im, x, 0, w, gy); }
+    rx.restore(); }
+  rx.strokeStyle = `rgba(${TH.line},.35)`; rx.lineWidth = 2; rx.beginPath(); rx.moveTo(0, gy); rx.lineTo(cw, gy); rx.stroke();
+  rx.fillStyle = `rgba(${tc()},${.25 + beat * beat * .5})`;
+  for (let k = 0; k < 10; k++) { const x = ((k / 8 - scroll) % 1.25 + 1.25) % 1.25 * cw; rx.fillRect(x, gy + 5, cw * .05, 3); }
+  // obstacles
+  const bw = Math.min(40, cw * .075), bh = bw * 1.15; rx.textAlign = "center"; rx.textBaseline = "middle"; rx.font = `700 ${bw * .58}px ${getComputedStyle(document.body).getPropertyValue("--mono") || "monospace"}`;
+  R.obs.forEach((o, i) => { if (o.dead || o.x > 1.1 || o.x < -.1) return;
+    const x = o.x * cw, cur = i === G.pos, y = gy - bh;
+    rx.fillStyle = cur ? acc : `rgba(${TH.line},.14)`; rx.strokeStyle = cur ? acc : `rgba(${TH.line},.4)`; rx.lineWidth = 1.5;
+    rx.beginPath(); rx.roundRect(x - bw / 2, y, bw, bh, 7); rx.fill(); rx.stroke();
+    rx.fillStyle = cur ? TH.ink : `rgb(${TH.text})`; rx.fillText(o.c === " " ? "␣" : o.c, x, y + bh / 2 + 1); });
+  // NABO
+  const size = ch * .62, jy = Math.sin((1 - R.jump) * Math.PI) * (R.jump > 0 ? ch * .34 : 0), x = NX * cw, y = gy - size - jy;
+  const key = R.stumble > 0 ? "hit" : R.jump > 0 ? "jump" : "run", im = R.img[key] || R.img.run;
+  if (im) { const n = Math.max(1, Math.round(im.width / im.height)), f = key === "jump" && R.img.jump ? Math.min(n - 1, Math.floor((1 - R.jump) * n)) : Math.floor(R.t * 12) % n;
+    rx.drawImage(im, f * im.height, 0, im.height, im.height, x - size / 2, y, size, size); }
+  else { // placeholder runner until the real NABO frames arrive
+    const bob = Math.sin(R.t * 14) * 2, r = size * .34, cy = y + size * .42 + bob, leg = Math.sin(R.t * 14) * size * .14;
+    rx.save(); rx.translate(x, cy); rx.rotate(R.stumble > 0 ? -.5 * R.stumble : .08);
+    rx.strokeStyle = acc; rx.lineWidth = 4; rx.lineCap = "round";
+    if (!R.jump) { rx.beginPath(); rx.moveTo(-r * .3, r * .8); rx.lineTo(-r * .3 + leg, r * 1.45); rx.moveTo(r * .3, r * .8); rx.lineTo(r * .3 - leg, r * 1.45); rx.stroke(); }
+    rx.fillStyle = R.stumble > 0 ? `rgb(${TH.hot})` : acc; rx.beginPath(); rx.roundRect(-r, -r, r * 2, r * 2, r * .7); rx.fill();
+    rx.fillStyle = TH.ink; rx.beginPath(); rx.arc(r * .2, -r * .15, r * .13, 0, 6.283); rx.arc(r * .62, -r * .15, r * .13, 0, 6.283); rx.fill();
+    rx.restore(); }
+  // lives
+  rx.textAlign = "left"; rx.font = `${Math.max(13, ch * .15)}px sans-serif`;
+  for (let i = 0; i < 3; i++) { rx.fillStyle = i < R.lives ? `rgb(${TH.hot})` : `rgba(${TH.line},.25)`; rx.fillText("♥", 6 + i * ch * .17, ch * .12); }
 }
 function tick(){
   const now = performance.now();
@@ -1378,7 +1480,7 @@ function finish(){
   const goalJust = !day.m && day.w >= P.goal; if (goalJust) day.m = 1;
   P.hist.unshift({t:Date.now(), m:G.daily ? "每日挑战" : MODE_NAMES[G.mode], l:LIST_NAMES[G.list], s:G.score, w:wpm, a:acc, r:rank}); P.hist.length = Math.min(P.hist.length, 30);
   const missed = Object.values(G.missed);
-  const canNext = G.chapter >= 0 && G.mode !== "sprint" && acc >= 85;
+  const canNext = G.chapter >= 0 && G.mode !== "sprint" && acc >= 85 && !(G.mode === "run" && R.lives <= 0);
   if (canNext) { passed[G.scope] = Math.max(passed[G.scope] || 0, G.chapter + 1); store.set("passed", passed); }
   const hasNext = canNext && G.chapter + 1 < chapCount(G.list);
   const newAch = checkAch(), lvNow = levelOf(P.xp), lo = xpFor(lvNow), hi = xpFor(lvNow + 1), st = streak(); saveP();
@@ -1389,11 +1491,13 @@ function finish(){
     ${goalJust ? '<span class="tag">今日目标达成</span>' : ""}${firstDaily ? '<span class="tag">每日挑战 +50 XP</span>' : ""}${newAch.map(a => `<span class="tag">成就：${a[1]}</span>`).join("")}</div>`;
   const nums = [["得分", G.score], ["WPM", wpm], ["准确率", acc, "%"], ["最高连击", G.maxCombo], ["完成词条", G.wordsDone]];
   if (G.mode === "rhythm") nums.push(["踩点率", beat, "%"]);
+  if (G.mode === "run") nums.push(["距离", Math.round(R.dist), "米"]);
   if (hid()) nums.push(["用了提示", G.hints, "次"]);
   $("card").innerHTML = `
     <div class="rank">${rank}</div>
     <div class="sum"><h2>${G.daily ? "每日挑战" : MODE_NAMES[G.mode]} · ${LIST_NAMES[G.list]}</h2>
-      <p>${isBest ? "新纪录。" : "最佳 " + old.score + " 分。"}${missed.length ? " 有 " + missed.length + " 个词出过错，已记入错词本。" : " 全部一次拼对。"}</p></div>
+      <p>${G.mode === "run" ? (R.lives > 0 ? "NABO 跑完了全程。" : "NABO 摔倒了。") : ""}${isBest ? "新纪录。" : "最佳 " + old.score + " 分。"}${missed.length ? " 有 " + missed.length + " 个词出过错，已记入错词本。" : " 全部一次拼对。"}</p></div>
+    ${G.mode === "run" && !reduced ? `<video class="result-video" muted playsinline preload="metadata" aria-hidden="true" src="assets/run/video/${R.lives > 0 ? "win" : "fail"}.mp4"></video>` : ""}
     ${gainHtml}
     <div class="nums">${nums.map(n => `<div class="num"><span>${n[0]}</span><b>${n[1]}${n[2] ? "<small>" + n[2] + "</small>" : ""}</b></div>`).join("")}</div>
     <div class="chart"><p>速度曲线（WPM / 秒）</p><canvas id="chart"></canvas></div>
@@ -1403,7 +1507,7 @@ function finish(){
   G.primary = hasNext ? () => { chaps[G.scope] = G.chapter + 1; store.set("ch", chaps); startGame(); } : again;
   if (hasNext) $("nextBtn").onclick = G.primary;
   $("againBtn").onclick = again; $("homeBtn").onclick = goHome;
-  show("result"); drawChart(G.samples);
+  show("result"); const video = $("card").querySelector("video"); if (video) { video.onerror = () => { video.hidden = true; }; const play = video.play(); if (play) play.catch(() => {}); } drawChart(G.samples);
 }
 function drawChart(d){
   const c = $("chart"), w = c.clientWidth, h = c.clientHeight, g = c.getContext("2d");
@@ -1423,6 +1527,7 @@ function goHome(){ G.state = "home"; musicStop(); speechStop(); setTier(0); $("c
 
 /* ================= home ================= */
 function renderHome(){
+  syncRunnerPreview();
   const wl = wrongList();
   if (cfg.list === "wrong" && wl.length < 1) { cfg.list = "cet4"; cfg.kind = "word"; }
   const items = LISTS.filter(l => l[2] === cfg.kind); let html = "", lv = 0, sep = false;
@@ -1514,6 +1619,7 @@ pick("themes", v => { cfg.theme = v; applyTheme(v); });
 $("optSpeak").onclick = () => { cfg.speak = !cfg.speak; renderHome(); };
 $("optMusic").onclick = () => { cfg.music = !cfg.music; renderHome(); };
 $("startBtn").onclick = () => startGame();
+$("runnerPromo").addEventListener("toggle", () => { const v = $("promoVideo"); if ($("runnerPromo").open) { if (!v.getAttribute("src")) v.src = "assets/run/video/promo.mp4"; } else v.pause(); });
 $("dailyBtn").onclick = () => startGame(true);
 $("meBtn").onclick = openMe;
 
@@ -1530,7 +1636,7 @@ addEventListener("keydown", e => {
   if (G.state === "me") { if (e.key === "Escape") goHome(); return; }
   if (G.state === "home") {
     if (e.key === "Enter" && !(document.activeElement && document.activeElement.tagName === "BUTTON")) { e.preventDefault(); startGame(); }
-    else if ("1234".includes(e.key) && e.key) { cfg.mode = ["rhythm","sprint","dictation","spell"][+e.key - 1]; renderHome(); }
+    else if ("12345".includes(e.key) && e.key) { cfg.mode = ["rhythm","sprint","dictation","spell","run"][+e.key - 1]; renderHome(); }
     else if (e.key === "ArrowLeft" || e.key === "ArrowRight") stepChap(e.key === "ArrowLeft" ? -1 : 1);
     return;
   }

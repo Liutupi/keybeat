@@ -1,6 +1,6 @@
 // KEYBEAT offline cache. The page itself is fetched from the network first so updates show up;
 // word lists, icons and fonts are served from cache and refreshed in the background.
-const CACHE = "keybeat-v3";
+const CACHE = "keybeat-v7";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
@@ -9,6 +9,7 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET") return;
+  if (req.headers.has("range")) return; // Browser media range requests must not receive a cached full response.
   const fonts = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
   if (url.origin !== location.origin && !fonts) return;            // e.g. dictionary audio: leave to the network
   const page = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
