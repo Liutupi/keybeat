@@ -1313,7 +1313,7 @@ function beginGame(){
   if (G.daily) G.mode = "rhythm";
   if (G.mode === "rhythm") G.queue = pool.slice(0, byChap ? 40 : 20);
   else if (G.mode === "spell") G.queue = pool.slice(0, byChap ? 40 : 20);
-  else if (G.mode === "run") G.queue = pool.slice(0, 40);
+  else if (G.mode === "run") G.queue = pool.slice(0, 60);
   else if (G.mode === "dictation") G.queue = pool.slice(0, 12);
   else { G.queue = pool; while (G.queue.length < 240) G.queue = G.queue.concat(shuffle(pool)); }
   G.total = G.queue.length;
@@ -1453,12 +1453,19 @@ for (const k of ["bg-far", "bg-near"]) { const im = new Image(); im.onload = () 
 function runReset(){
   Object.assign(R, {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:performance.now(), t:0,
     vel:0, flow:0, approach:0, fairTarget:0, span:.64, pitch:.06, feet:0, kick:0, vault:0});
+  R._ap = 0;
+}
+function runCredit(){
+  const due = Math.max(0, (R.fairTarget || 0) - (R._ap || 0));
+  if (due) { R.dist += due * 18; if (G.mode === "run") hud(); }
+  R._ap = R.approach = R.fairTarget = 0;
 }
 function runSpawn(){
   const w = G.cur ? G.cur.w : "";
   const n = Math.max(1, [...w].length);
-  const flying = R.obs.filter(o => !o.dead && o.fly);
-  R.span = .64; R.approach = 0; R.fairTarget = 0; R.vault = 0;
+  runCredit();
+  const flying = R.obs.filter(o => o.fly && !o.dead && o.x > -.3);
+  R.span = .64; R.vault = 0;
   R.pitch = Math.min(.062, .46 / n);
   const fresh = [...w].map((c, i) => ({c, i, gen: G.idx, cleared:false, dead:false, x: NX + R.span + i * R.pitch, slip:0, fly:0}));
   R.obs = flying.concat(fresh);
@@ -1483,7 +1490,7 @@ function runVault(){
   R.vault = 1;
   if (R.jump <= .04) R.jump = 1;
   runPush();
-  for (const o of R.obs) if (!o.dead && !o.fly) o.fly = 1.15;
+  for (const o of R.obs) if (!o.dead && !o.fly) o.fly = Math.max(1.8, (o.x + .5) / .26);
   const rect = rw.getBoundingClientRect();
   burst(rect.left + NX * rect.width, rect.top + rect.height * .42, 18, COL.gold, 6);
   if (!reduced) ring(rect.left + NX * rect.width, rect.top + rect.height * .42, COL.gold, 5, .55, 2);
@@ -1509,7 +1516,7 @@ function runTick(now){
     R.flow += R.vel * dt;
     R.dist += Math.max(0, R.approach - (R._ap || 0)) * 18;
     R._ap = R.approach;
-    if (R.vel > .04 || R.kick > 0) R.feet += dt * (2.2 + R.vel * 6.5);
+    if (!reduced && (R.vel > .04 || R.kick > 0)) R.feet += dt * (2.2 + R.vel * 6.5);
   }
   if (R.jump > 0) R.jump = Math.max(0, R.jump - dt / .42);
   R.kick = Math.max(0, R.kick - dt / .16);
@@ -1521,15 +1528,15 @@ function runTick(now){
   for (const o of R.obs) {
     if (o.dead) continue;
     if (o.fly) {
-      o.x -= o.fly * dt * 2.4;
-      o.fly *= Math.exp(-dt / .18);
-      if (o.x < -.2) o.dead = true;
+      o.x -= o.fly * dt;
+      if (o.x < -.3) { o.dead = true; o.fly = 0; }
       continue;
     }
     if (o.cleared) o.slip = (o.slip || 0) + (.12 - (o.slip || 0)) * (1 - Math.exp(-dt / .06));
     o.x = NX + gapLeft + o.i * R.pitch - (o.slip || 0);
     if (o.x < NX - .2) o.dead = true;
   }
+  if (R.obs.some(o => o.dead)) R.obs = R.obs.filter(o => !o.dead);
   runDraw();
 }
 function runMetrics(ch){
@@ -1544,14 +1551,14 @@ function runDraw(){
   if (rw.width !== Math.round(cw * DPR)) { rw.width = Math.round(cw * DPR); rw.height = Math.round(ch * DPR); }
   rx.setTransform(DPR, 0, 0, DPR, 0, 0); rx.clearRect(0, 0, cw, ch);
   const m = runMetrics(ch), gy = m.gy, acc = `rgb(${tc()})`, beat = 1 - (beatNow() % 1);
-  const scroll = R.flow, bgScroll = reduced ? 0 : R.flow;
+  const scroll = reduced ? 0 : R.flow, bgScroll = scroll;
   if (R.img["bg-far"] || R.img["bg-near"]) { rx.save(); rx.beginPath(); rx.roundRect(0, 0, cw, gy, 10); rx.clip(); rx.globalAlpha = TH.light ? .5 : .9;
     for (const [k, sp] of [["bg-far", .25], ["bg-near", .6]]) { const im = R.img[k]; if (!im) continue;
       const w = im.width * gy / im.height, off = ((bgScroll * cw * sp) % w + w) % w; for (let x = -off; x < cw; x += w) rx.drawImage(im, x, 0, w, gy); }
     rx.restore(); }
   rx.strokeStyle = `rgba(${TH.line},.35)`; rx.lineWidth = 2; rx.beginPath(); rx.moveTo(0, gy); rx.lineTo(cw, gy); rx.stroke();
   rx.fillStyle = `rgba(${tc()},${.25 + beat * beat * .5})`;
-  for (let k = 0; k < 10; k++) { const x = ((k / 8 - scroll * (reduced ? .25 : 1)) % 1.25 + 1.25) % 1.25 * cw; rx.fillRect(x, gy + 5, cw * .05, 3); }
+  for (let k = 0; k < 10; k++) { const x = ((k / 8 - scroll) % 1.25 + 1.25) % 1.25 * cw; rx.fillRect(x, gy + 5, cw * .05, 3); }
   const bw = Math.min(40, cw * .075), bh = bw * 1.15;
   rx.textAlign = "center"; rx.textBaseline = "middle"; rx.font = `700 ${bw * .58}px ${getComputedStyle(document.body).getPropertyValue("--mono") || "monospace"}`;
   for (const o of R.obs) {
@@ -1823,6 +1830,13 @@ addEventListener("keydown", e => {
   }
   if (G.state === "result") { if (e.key === "Enter") { e.preventDefault(); (G.primary || startGame)(); } else if (e.key === "Escape") goHome(); return; }
   if (e.key === "Escape") { goHome(); return; }
+  if (G.state === "swap" && G.mode === "run") {
+    if (e.repeat) return;
+    const c = letterOf(e); if (!c) return;
+    e.preventDefault();
+    typeChar(c);
+    return;
+  }
   if (G.state !== "play") { e.preventDefault(); return; }
   if (e.key === "Tab") { e.preventDefault(); speak(G.cur.w, true); return; }
   if (e.key === "Enter") { e.preventDefault(); if (hid()) { G.hints++; miss(true); } return; }
@@ -1858,7 +1872,9 @@ function updatePad(){
 }
 $("pad").addEventListener("pointerdown", ev => {
   const b = ev.target.closest("[data-k]"); if (!b) return; ev.preventDefault();
-  const k = b.dataset.k; if (G.state !== "play") return;
+  const k = b.dataset.k;
+  if (G.state === "swap" && G.mode === "run" && k !== "replay" && k !== "hint") { typeChar(k); return; }
+  if (G.state !== "play") return;
   if (k === "replay") { speak(G.cur.w, true); return; }
   if (k === "hint") { G.hints++; miss(true); return; }
   if (b.classList.contains("tile")) { if (k !== G.cur.w[G.pos].toLowerCase()) { b.classList.remove("bad"); void b.offsetWidth; b.classList.add("bad"); } }
