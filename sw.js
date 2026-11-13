@@ -1,6 +1,6 @@
 // KEYBEAT offline cache. The page itself is fetched from the network first so updates show up;
 // word lists, icons and fonts are served from cache and refreshed in the background.
-const CACHE = "keybeat-v10";
+const CACHE = "keybeat-v11";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "icons/icon-192.png",
   "assets/nabo/run-1.webp", "assets/nabo/run-2.webp", "assets/nabo/run-3.webp", "assets/nabo/run-4.webp", "assets/nabo/run-5.webp",
