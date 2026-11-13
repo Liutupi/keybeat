@@ -1404,8 +1404,10 @@ function runDraw(){
   if (rw.width !== Math.round(cw * DPR)) { rw.width = Math.round(cw * DPR); rw.height = Math.round(ch * DPR); }
   rx.setTransform(DPR, 0, 0, DPR, 0, 0); rx.clearRect(0, 0, cw, ch);
   const gy = ch * .84, acc = `rgb(${tc()})`, beat = 1 - (beatNow() % 1), scroll = R.dist / 30;
-  for (const [k, sp] of [["bg-far", .25], ["bg-near", .6]]) { const im = R.img[k]; if (!im) continue;
-    const w = im.width * gy / im.height, off = (scroll * cw * sp) % w; for (let x = -off; x < cw; x += w) rx.drawImage(im, x, 0, w, gy); }
+  if (R.img["bg-far"] || R.img["bg-near"]) { rx.save(); rx.beginPath(); rx.roundRect(0, 0, cw, gy, 10); rx.clip(); rx.globalAlpha = TH.light ? .5 : .9;
+    for (const [k, sp] of [["bg-far", .25], ["bg-near", .6]]) { const im = R.img[k]; if (!im) continue;
+      const w = im.width * gy / im.height, off = (scroll * cw * sp) % w; for (let x = -off; x < cw; x += w) rx.drawImage(im, x, 0, w, gy); }
+    rx.restore(); }
   rx.strokeStyle = `rgba(${TH.line},.35)`; rx.lineWidth = 2; rx.beginPath(); rx.moveTo(0, gy); rx.lineTo(cw, gy); rx.stroke();
   rx.fillStyle = `rgba(${tc()},${.25 + beat * beat * .5})`;
   for (let k = 0; k < 10; k++) { const x = ((k / 8 - scroll) % 1.25 + 1.25) % 1.25 * cw; rx.fillRect(x, gy + 5, cw * .05, 3); }
