@@ -1,7 +1,13 @@
 // KEYBEAT offline cache. The page itself is fetched from the network first so updates show up;
 // word lists, icons and fonts are served from cache and refreshed in the background.
-const CACHE = "keybeat-v9";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png"];
+const CACHE = "keybeat-v10";
+const SHELL = [
+  "./", "index.html", "manifest.webmanifest", "icons/icon-192.png",
+  "assets/nabo/run-1.webp", "assets/nabo/run-2.webp", "assets/nabo/run-3.webp", "assets/nabo/run-4.webp", "assets/nabo/run-5.webp",
+  "assets/nabo/jump.webp", "assets/nabo/hit.webp",
+  "assets/run/video/pose-home.webp", "assets/run/video/pose-win.webp", "assets/run/video/pose-fail.webp",
+  "assets/run/video/win_v2.mp4", "assets/run/video/fail_v2.mp4"
+];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
