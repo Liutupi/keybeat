@@ -1384,10 +1384,11 @@ function hud(){
   if (G.mode !== "sprint") { $("prog").style.width = (G.total ? G.idx / G.total * 100 : 0) + "%"; $("left").textContent = G.mode === "run" ? Math.round(R.dist) + " 米" : Math.min(G.idx + 1, G.total || 1) + " / " + (G.total || 0); }
 }
 /* ---------- NABO beat runner: letters come at NABO as obstacles; type each one before it arrives ---------- */
-const R = {obs:[], dist:0, lives:3, jump:0, stumble:0, last:0, t:0, img:{}};
+const R = {obs:[], dist:0, lives:3, jump:0, stumble:0, last:0, t:0, img:{}, runFrames:Array(5).fill(null)};
 const rw = $("runway"), rx = rw.getContext("2d"), NX = .17;
 // Optional art. Each file is a horizontal strip of square frames; without them a placeholder is drawn.
 for (const k of ["run", "jump", "hit"]) { const im = new Image(); im.onload = () => { R.img[k] = im; }; im.src = "assets/nabo/" + k + ".png"; }
+for (let i = 0; i < R.runFrames.length; i++) { const im = new Image(); im.onload = () => { R.runFrames[i] = im; }; im.src = "assets/nabo/run-" + (i + 1) + ".png"; }
 for (const k of ["bg-far", "bg-near"]) { const im = new Image(); im.onload = () => { R.img[k] = im; }; im.src = "assets/run/" + k + ".png"; }
 function runReset(){ Object.assign(R, {obs:[], dist:0, lives:3, jump:0, stumble:0, last:performance.now(), t:0}); }
 const runV = () => TOUCH ? .2 : .28;   // scroll speed, in runway widths per second
@@ -1439,8 +1440,10 @@ function runDraw(){
     rx.beginPath(); rx.roundRect(x - bw / 2, y, bw, bh, 7); rx.fill(); rx.stroke();
     rx.fillStyle = cur ? TH.ink : `rgb(${TH.text})`; rx.fillText(o.c === " " ? "␣" : o.c, x, y + bh / 2 + 1); });
   // NABO
-  const size = ch * .62, jy = Math.sin((1 - R.jump) * Math.PI) * (R.jump > 0 ? ch * .34 : 0), x = NX * cw, y = gy - size - jy;
-  const key = R.stumble > 0 ? "hit" : R.jump > 0 ? "jump" : "run", im = R.img[key] || R.img.run;
+  const size = ch * .92, jy = Math.sin((1 - R.jump) * Math.PI) * (R.jump > 0 ? ch * .34 : 0), x = NX * cw, y = gy - size * .93 - jy;
+  const key = R.stumble > 0 ? "hit" : R.jump > 0 ? "jump" : "run", sequence = [0, 1, 2, 3, 4, 3, 2, 1];
+  const runFrame = R.runFrames.every(Boolean) ? R.runFrames[sequence[Math.floor(R.t * 8) % sequence.length]] : null;
+  const im = (key === "run" && runFrame) || R.img[key] || runFrame || R.img.run;
   if (im) { const n = Math.max(1, Math.round(im.width / im.height)), f = key === "jump" && R.img.jump ? Math.min(n - 1, Math.floor((1 - R.jump) * n)) : Math.floor(R.t * 12) % n;
     rx.drawImage(im, f * im.height, 0, im.height, im.height, x - size / 2, y, size, size); }
   else { // placeholder runner until the real NABO frames arrive
