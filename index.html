@@ -302,7 +302,7 @@ textarea.field{border-radius:12px;width:100%;min-height:74px;font-family:var(--m
         <button class="mode" data-v="sprint"><i>2</i><strong>竞速</strong><small>限时 45 秒，尽可能多地敲，测你的 WPM。</small></button>
         <button class="mode" data-v="dictation"><i>3</i><strong>听写</strong><small>只给发音和中文，凭记忆拼出来。</small></button>
         <button class="mode" data-v="spell"><i>4</i><strong>拼词</strong><small>听发音、看中文，点字母块把词拼出来。手机上单手就能玩。</small></button>
-        <button class="mode" data-v="run"><i>5</i><strong>NABO 跑酷</strong><small>字母障碍迎面而来，在撞上之前打出来。三条命，越跑越快。</small></button>
+        <button class="mode" data-v="run"><i>5</i><strong>NABO 跑酷</strong><small>按键就是步伐。敲对立刻往前冲，停下会慢慢站住；拼完这个词马上跃过它。敲错会刹住。三条命。</small></button>
       </div>
     </div>
     <div class="group">
@@ -1313,7 +1313,7 @@ function beginGame(){
   if (G.daily) G.mode = "rhythm";
   if (G.mode === "rhythm") G.queue = pool.slice(0, byChap ? 40 : 20);
   else if (G.mode === "spell") G.queue = pool.slice(0, byChap ? 40 : 20);
-  else if (G.mode === "run") G.queue = pool.slice(0, 40);
+  else if (G.mode === "run") G.queue = pool.slice(0, 60);
   else if (G.mode === "dictation") G.queue = pool.slice(0, 12);
   else { G.queue = pool; while (G.queue.length < 240) G.queue = G.queue.concat(shuffle(pool)); }
   G.total = G.queue.length;
@@ -1352,6 +1352,7 @@ function loadWord(){
   $("ipa").textContent = G.mode === "spell" ? "听发音，按顺序点字母块" : hid() ? (e.phrase ? "听发音，拼出这个短语（空格也要敲）" : "听发音，拼出这个词") : e.ipa ? "/" + e.ipa + "/" : "短语 · 空格也要敲";
   $("next").textContent = hid() ? "" : G.queue.slice(G.idx + 1, G.idx + (e.phrase ? 2 : 4)).map(x => x.w).join("   ");
   updatePad(); if (G.mode === "run") { runSpawn(); maybePreloadRunVideos(); } markCur(); if (G.mode !== "sprint") { speak(e.w, hid()); const nx = G.queue[G.idx + 1]; if (nx && (cfg.speak || hid())) preload(nx.w); }
+  if (G.mode === "run") flushRunBuf();
 }
 function markCur(){ const cs = $("word").children; for (let i = 0; i < cs.length; i++) cs[i].classList.toggle("cur", i === G.pos); }
 function centerOf(el){ const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
@@ -1402,10 +1403,12 @@ function miss(reveal){
   const [x, y] = centerOf(w.children[G.pos]); burst(x, y, 16, COL.hot, 5); FX.shake = 18; if (!reduced) ring(x, y, COL.hot, 7, .6, 2);
   G.missed[G.cur.w] = G.cur;
   if (hid() && (reveal || G.posErr >= 3)) { const el = w.children[G.pos]; if (G.cur.w[G.pos] !== " ") el.textContent = G.cur.w[G.pos]; el.style.color = "var(--hot)"; }
+  if (G.mode === "run" && !reveal) runBrake();
   hud();
 }
 function wordDone(){
   const e = G.cur, w = $("word"), clean = G.wordErr === 0;
+  if (G.mode === "run") runVault();
   learnWord(e, clean); dayRec(today()).w++;
   if (clean) { G.score += e.w.length * 5 * mult(); okWrong(e); }
   else addWrong(e);
@@ -1416,7 +1419,7 @@ function wordDone(){
   popScore(x, $("zh").getBoundingClientRect().top - 36, "+" + (G.score - G.wordScore));
   sfxWord(CHORDS[A.ctx ? curBar(A.ctx.currentTime) : 0]);
   G.wordsDone++; G.idx++; G.state = "swap"; w.classList.add("out");
-  setTimeout(() => { if (G.state !== "swap") return; G.state = "play"; loadWord(); }, G.mode === "sprint" ? 90 : 240);
+  setTimeout(() => { if (G.state !== "swap") return; G.state = "play"; loadWord(); }, G.mode === "run" ? 40 : G.mode === "sprint" ? 90 : 240);
 }
 function timeoutWord(){
   const e = G.cur; G.missed[e.w] = e; addWrong(e); learnWord(e, false);
@@ -1430,92 +1433,110 @@ function hud(){
   $("score").textContent = G.score || 0; $("acc").textContent = accNow() + "%";
   if (G.mode !== "sprint") { $("prog").style.width = (G.total ? G.idx / G.total * 100 : 0) + "%"; $("left").textContent = G.mode === "run" ? Math.round(R.dist) + " 米" : Math.min(G.idx + 1, G.total || 1) + " / " + (G.total || 0); }
 }
-/* ---------- NABO beat runner ----------
-   Obstacles sit on the beat (later words, the half-beat). Position comes from beatNow,
-   so there is no dash that breaks the tempo. A correct key only marks a block cleared;
-   NABO hops when that block reaches him, and a hop already in the air is not restarted. */
-const R = {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:0, t:0, beatAt:0, img:{}, runFrames:Array(5).fill(null), loaded:0, failed:0, holdCount:false};
+/* ---------- NABO runner ----------
+   Typing is the engine. A correct letter immediately adds speed and closes an equal
+   share of a fixed gap, so a short word and a long word cover the same distance.
+   Speed coasts down to a stop when the hands do. Finishing the word vaults the
+   blocks at once. The beat can tint a PERFECT, but it never has to arrive first. */
+const R = {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:0, t:0, img:{}, runFrames:Array(5).fill(null), loaded:0, failed:0, holdCount:false,
+  vel:0, flow:0, approach:0, fairTarget:0, span:.64, pitch:.06, feet:0, kick:0, vault:0};
 const rw = $("runway"), rx = rw.getContext("2d");
-const NX = .17, MEET = NX + .045, JUMP_BEATS = 1;
+const NX = .18;
+const RUN_IMPULSE = () => TOUCH ? .78 : .9;
+const RUN_VMAX = () => TOUCH ? 1.15 : 1.5;
 function artSettled(){ return R.loaded + R.failed >= 7; }
 function markArt(ok){ if (ok) R.loaded++; else R.failed++; if (R.holdCount && artSettled()) { R.holdCount = false; startCount(); } }
 function loadArt(src, onok){ const im = new Image(); im.onload = () => { onok(im); markArt(true); }; im.onerror = () => markArt(false); im.src = src; }
 for (let i = 0; i < R.runFrames.length; i++) loadArt("assets/nabo/run-" + (i + 1) + ".webp", im => { R.runFrames[i] = im; });
 for (const k of ["jump", "hit"]) loadArt("assets/nabo/" + k + ".webp", im => { R.img[k] = im; });
 for (const k of ["bg-far", "bg-near"]) { const im = new Image(); im.onload = () => { R.img[k] = im; }; im.src = "assets/run/" + k + ".png"; }
-function runReset(){ Object.assign(R, {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:performance.now(), t:0, beatAt:0}); }
-function gapBase(){ return TOUCH ? .22 : .27; }
-function runGap(){ return gapBase() * Math.min(1.35, 1 + (G.wordsDone || 0) * .02); }
-function runStepBeats(){ return (G.wordsDone || 0) >= 10 ? .5 : 1; }
-function runSpawn(){
-  const gap = runGap(), step = runStepBeats(), now = beatNow();
-  const lead = (1.02 - MEET) / gap;
-  let first = Math.ceil((now + lead) / step) * step;
-  if (first - step >= now + 1.15) {
-    const closer = MEET + (first - step - now) * gap;
-    if (closer >= .9) first -= step;
-  }
-  if (first < now + 1.15) first += step;
-  const pending = R.obs.filter(o => !o.dead);
-  if (pending.length) first = Math.max(first, pending[pending.length - 1].arrive + step);
-  const gen = G.idx;
-  const fresh = [...G.cur.w].map((c, i) => ({c, i, gen, arrive: first + i * step, gap, cleared:false, dead:false, x:1.2}));
-  R.obs = pending.concat(fresh);
+function runReset(){
+  Object.assign(R, {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:performance.now(), t:0,
+    vel:0, flow:0, approach:0, fairTarget:0, span:.64, pitch:.06, feet:0, kick:0, vault:0});
+  R._ap = 0;
 }
-function placeObs(b){ for (const o of R.obs) o.x = MEET + (o.arrive - b) * o.gap; }
-function runHop(){ if (R.jump > .02) return; R.jump = 1; }
+function runCredit(){
+  const due = Math.max(0, (R.fairTarget || 0) - (R._ap || 0));
+  if (due) { R.dist += due * 18; if (G.mode === "run") hud(); }
+  R._ap = R.approach = R.fairTarget = 0;
+}
+function runSpawn(){
+  const w = G.cur ? G.cur.w : "";
+  const n = Math.max(1, [...w].length);
+  runCredit();
+  const flying = R.obs.filter(o => o.fly && !o.dead && o.x > -.3);
+  R.span = .64; R.vault = 0;
+  R.pitch = Math.min(.062, .46 / n);
+  const fresh = [...w].map((c, i) => ({c, i, gen: G.idx, cleared:false, dead:false, x: NX + R.span + i * R.pitch, slip:0, fly:0}));
+  R.obs = flying.concat(fresh);
+}
+function runPush(){
+  R.vel = Math.min(RUN_VMAX(), R.vel + RUN_IMPULSE());
+  R.kick = 1;
+  R.feet += .55;
+}
 function runHit(){
   const o = R.obs.find(o => o.gen === G.idx && o.i === G.pos && !o.dead);
-  if (!o) return;
-  o.cleared = true;
+  if (o) o.cleared = true;
+  const n = Math.max(1, G.cur ? [...G.cur.w].length : 1);
+  R.fairTarget = Math.max(R.fairTarget, Math.min(R.span, ((G.pos + 1) / n) * R.span));
+  runPush();
+  if (o) {
+    const rect = rw.getBoundingClientRect();
+    burst(rect.left + o.x * rect.width, rect.top + rect.height * .58, 10, tc(), 4);
+  }
+}
+function runVault(){
+  R.vault = 1;
+  if (R.jump <= .04) R.jump = 1;
+  runPush();
+  for (const o of R.obs) if (!o.dead && !o.fly) o.fly = Math.max(1.8, (o.x + .5) / .26);
   const rect = rw.getBoundingClientRect();
-  burst(rect.left + o.x * rect.width, rect.top + rect.height * .62, 12, tc(), 4.5);
+  burst(rect.left + NX * rect.width, rect.top + rect.height * .42, 18, COL.gold, 6);
+  if (!reduced) ring(rect.left + NX * rect.width, rect.top + rect.height * .42, COL.gold, 5, .55, 2);
 }
-function runStrike(o, damage){
-  const el = $("word").children[G.pos];
-  if (o) o.dead = true;
-  if (damage) {
-    R.lives--; if (R.lives >= 0) R.heartT[R.lives] = 1;
-    R.stumble = 1; R.knock = 1; R.iframe = .5;
-    G.err++; G.wordErr++; setCombo(0); sfxError(); flash("err"); buzz([30, 50, 30]); FX.shake = 20;
-    G.missed[G.cur.w] = G.cur;
-    if (R.lives <= 1) ensureResultVideos();
-  }
-  if (el) { if (G.cur.w[G.pos] !== " ") el.textContent = G.cur.w[G.pos]; el.classList.add("done"); el.style.color = "var(--hot)"; }
-  G.pos++; G.posErr = 0;
-  if (damage && R.lives <= 0) { learnWord(G.cur, false); addWrong(G.cur); finish(); return; }
-  if (G.pos >= G.cur.w.length) wordDone(); else markCur();
-  hud();
-}
-function runResolve(){
-  for (const o of R.obs) {
-    if (o.dead) continue;
-    if (o.x > MEET + .02) break;
-    const mine = o.gen === G.idx && G.state === "play" && !o.cleared;
-    if (!mine) {
-      o.dead = true;
-      if (o.cleared) {
-        runHop();
-        const rect = rw.getBoundingClientRect();
-        const px = rect.left + NX * rect.width, py = rect.top + rect.height * .4;
-        burst(px, py, 14, tc(), 5); if (!reduced) ring(px, py, tc(), 4, .45, 1.5);
-      }
-      continue;
-    }
-    runStrike(o, R.iframe <= 0);
-    break;
-  }
+function runBrake(){
+  R.vel *= .08;
+  R.stumble = 1; R.knock = 1;
+  if (R.iframe > 0) return;
+  R.lives--;
+  if (R.lives >= 0) R.heartT[R.lives] = 1;
+  R.iframe = .45;
+  if (R.lives <= 1) ensureResultVideos();
+  if (R.lives <= 0) { learnWord(G.cur, false); addWrong(G.cur); finish(); }
 }
 function runTick(now){
   const dt = Math.min(.05, (now - R.last) / 1000); R.last = now; R.t += dt;
-  const b = beatNow(), db = R.beatAt ? Math.min(.5, Math.max(0, b - R.beatAt)) : 0; R.beatAt = b;
-  if (R.jump > 0) R.jump = Math.max(0, R.jump - db / JUMP_BEATS);
-  R.stumble = Math.max(0, R.stumble - dt / .5);
-  R.knock = Math.max(0, R.knock - dt / .42);
+  const live = G.state === "play" || G.state === "swap";
+  if (live) {
+    R.vel *= Math.exp(-dt / .42);
+    if (R.vel < .02) R.vel = 0;
+    const tau = R.vault ? .07 : .07;
+    R.approach += (R.fairTarget - R.approach) * (1 - Math.exp(-dt / tau));
+    R.flow += R.vel * dt;
+    R.dist += Math.max(0, R.approach - (R._ap || 0)) * 18;
+    R._ap = R.approach;
+    if (!reduced && (R.vel > .04 || R.kick > 0)) R.feet += dt * (2.2 + R.vel * 6.5);
+  }
+  if (R.jump > 0) R.jump = Math.max(0, R.jump - dt / .42);
+  R.kick = Math.max(0, R.kick - dt / .16);
+  R.stumble = Math.max(0, R.stumble - dt / .48);
+  R.knock = Math.max(0, R.knock - dt / .36);
   R.iframe = Math.max(0, R.iframe - dt);
   for (let i = 0; i < 3; i++) if (R.heartT[i] > 0) R.heartT[i] = Math.max(0, R.heartT[i] - dt / .48);
-  if ((G.state === "play" || G.state === "swap") && R.obs.length) { placeObs(b); runResolve(); }
-  if (G.state === "play" || G.state === "swap" || G.state === "count") R.dist += runGap() * (cfg.bpm / 60) * dt * (G.state === "count" ? 16 : 30);
+  const gapLeft = R.span - R.approach;
+  for (const o of R.obs) {
+    if (o.dead) continue;
+    if (o.fly) {
+      o.x -= o.fly * dt;
+      if (o.x < -.3) { o.dead = true; o.fly = 0; }
+      continue;
+    }
+    if (o.cleared) o.slip = (o.slip || 0) + (.12 - (o.slip || 0)) * (1 - Math.exp(-dt / .06));
+    o.x = NX + gapLeft + o.i * R.pitch - (o.slip || 0);
+    if (o.x < NX - .2) o.dead = true;
+  }
+  if (R.obs.some(o => o.dead)) R.obs = R.obs.filter(o => !o.dead);
   runDraw();
 }
 function runMetrics(ch){
@@ -1530,10 +1551,10 @@ function runDraw(){
   if (rw.width !== Math.round(cw * DPR)) { rw.width = Math.round(cw * DPR); rw.height = Math.round(ch * DPR); }
   rx.setTransform(DPR, 0, 0, DPR, 0, 0); rx.clearRect(0, 0, cw, ch);
   const m = runMetrics(ch), gy = m.gy, acc = `rgb(${tc()})`, beat = 1 - (beatNow() % 1);
-  const scroll = reduced ? 0 : R.dist / 30;
+  const scroll = reduced ? 0 : R.flow, bgScroll = scroll;
   if (R.img["bg-far"] || R.img["bg-near"]) { rx.save(); rx.beginPath(); rx.roundRect(0, 0, cw, gy, 10); rx.clip(); rx.globalAlpha = TH.light ? .5 : .9;
     for (const [k, sp] of [["bg-far", .25], ["bg-near", .6]]) { const im = R.img[k]; if (!im) continue;
-      const w = im.width * gy / im.height, off = reduced ? 0 : (scroll * cw * sp) % w; for (let x = -off; x < cw; x += w) rx.drawImage(im, x, 0, w, gy); }
+      const w = im.width * gy / im.height, off = ((bgScroll * cw * sp) % w + w) % w; for (let x = -off; x < cw; x += w) rx.drawImage(im, x, 0, w, gy); }
     rx.restore(); }
   rx.strokeStyle = `rgba(${TH.line},.35)`; rx.lineWidth = 2; rx.beginPath(); rx.moveTo(0, gy); rx.lineTo(cw, gy); rx.stroke();
   rx.fillStyle = `rgba(${tc()},${.25 + beat * beat * .5})`;
@@ -1549,10 +1570,10 @@ function runDraw(){
     rx.fillStyle = o.cleared ? `rgb(${TH.gold})` : cur ? TH.ink : `rgb(${TH.text})`;
     rx.fillText(o.c === " " ? "␣" : o.c, x, y + bh / 2 + 1);
   }
-  const ratio = runGap() / gapBase(), stepPhase = beatNow() * ratio;
-  const seq = [0, 1, 2, 3, 4, 3, 2, 1], fi = seq[Math.floor(stepPhase * 4) % seq.length];
-  const arc = R.jump > 0 ? Math.sin((1 - R.jump) * Math.PI) : 0;
-  const bob = (!reduced && R.jump === 0 && R.stumble <= 0) ? Math.abs(Math.sin(stepPhase * Math.PI)) * m.bobAmp : 0; // 4% of the sprite, one bounce per step
+  const moving = R.vel > .05 || R.kick > 0;
+  const seq = [0, 1, 2, 3, 4, 3, 2, 1], fi = seq[Math.floor(R.feet * 2) % seq.length];
+  const arc = R.jump > 0 ? Math.sin((1 - R.jump) * Math.PI) * (reduced ? .4 : 1) : 0;
+  const bob = (!reduced && moving && R.jump === 0 && R.stumble <= 0) ? Math.abs(Math.sin(R.feet * Math.PI)) * m.bobAmp : 0;
   let y = gy - m.size - arc * m.jumpAmp - bob; if (y < 1) y = 1;
   const knock = R.knock > 0 ? Math.sin(R.knock * Math.PI) * m.size * .26 : 0, x = NX * cw - knock;
   rx.save(); rx.translate(x, gy - 2); rx.scale(1 - arc * .35, .22); rx.globalAlpha = .28 * (1 - arc * .5); rx.fillStyle = "#000";
@@ -1690,7 +1711,7 @@ function drawChart(d){
   const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, `rgba(${TIER_COL[0]},.28)`); gr.addColorStop(1, `rgba(${TIER_COL[0]},0)`); g.fillStyle = gr; g.fill();
   g.fillStyle = `rgb(${TH.gold})`; g.beginPath(); g.arc(px(d.length - 1), py(d[d.length - 1]), 4, 0, 6.283); g.fill();
 }
-function goHome(){ G.state = "home"; musicStop(); speechStop(); setTier(0); $("count").classList.remove("on"); store.set("wrong", wrongBook); saveP(); renderHome(); show("home"); }
+function goHome(){ runBuf.length = 0; G.state = "home"; musicStop(); speechStop(); setTier(0); $("count").classList.remove("on"); store.set("wrong", wrongBook); saveP(); renderHome(); show("home"); }
 
 /* ================= home ================= */
 function renderHome(){
@@ -1809,6 +1830,13 @@ addEventListener("keydown", e => {
   }
   if (G.state === "result") { if (e.key === "Enter") { e.preventDefault(); (G.primary || startGame)(); } else if (e.key === "Escape") goHome(); return; }
   if (e.key === "Escape") { goHome(); return; }
+  if (G.state === "swap" && G.mode === "run") {
+    if (e.repeat) return;
+    const c = letterOf(e); if (!c) return;
+    e.preventDefault();
+    typeChar(c);
+    return;
+  }
   if (G.state !== "play") { e.preventDefault(); return; }
   if (e.key === "Tab") { e.preventDefault(); speak(G.cur.w, true); return; }
   if (e.key === "Enter") { e.preventDefault(); if (hid()) { G.hints++; miss(true); } return; }
@@ -1818,7 +1846,13 @@ addEventListener("keydown", e => {
   if (e.key === "Process" || e.isComposing) toast("检测到中文输入法，建议切换到英文");
   typeChar(c);
 });
-function typeChar(c){ if (G.state !== "play" || !G.cur) return; if (c === G.cur.w[G.pos].toLowerCase()) hit(); else miss(false); }
+const runBuf = [];
+function flushRunBuf(){ const q = runBuf.splice(0, runBuf.length); for (const ch of q) typeChar(ch); }
+function typeChar(c){
+  if (G.mode === "run" && G.state === "swap") { runBuf.push(c); return; }
+  if (G.state !== "play" || !G.cur) return;
+  if (c === G.cur.w[G.pos].toLowerCase()) hit(); else miss(false);
+}
 /* ---------- on-screen input: keyboard on touch devices, letter tiles in spell mode ---------- */
 function useTile(c){ const t = [...document.querySelectorAll("#tiles .tile:not(.used)")].find(x => x.dataset.k === c); if (t) t.classList.add("used"); }
 function updatePad(){
@@ -1838,7 +1872,9 @@ function updatePad(){
 }
 $("pad").addEventListener("pointerdown", ev => {
   const b = ev.target.closest("[data-k]"); if (!b) return; ev.preventDefault();
-  const k = b.dataset.k; if (G.state !== "play") return;
+  const k = b.dataset.k;
+  if (G.state === "swap" && G.mode === "run" && k !== "replay" && k !== "hint") { typeChar(k); return; }
+  if (G.state !== "play") return;
   if (k === "replay") { speak(G.cur.w, true); return; }
   if (k === "hint") { G.hints++; miss(true); return; }
   if (b.classList.contains("tile")) { if (k !== G.cur.w[G.pos].toLowerCase()) { b.classList.remove("bad"); void b.offsetWidth; b.classList.add("bad"); } }
