@@ -1,6 +1,6 @@
 // KEYBEAT offline cache. The page itself is fetched from the network first so updates show up;
 // word lists, icons and fonts are served from cache and refreshed in the background.
-const CACHE = "keybeat-v8";
+const CACHE = "keybeat-v9";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
