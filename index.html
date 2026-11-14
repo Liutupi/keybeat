@@ -1438,17 +1438,16 @@ function hud(){
    share of a fixed gap, so a short word and a long word cover the same distance.
    Speed coasts down to a stop when the hands do. Finishing the word vaults the
    blocks at once. The beat can tint a PERFECT, but it never has to arrive first. */
-const R = {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:0, t:0, img:{}, runFrames:Array(5).fill(null), loaded:0, failed:0, holdCount:false,
+const R = {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:0, t:0, img:{}, loaded:0, failed:0, holdCount:false,
   vel:0, flow:0, approach:0, fairTarget:0, span:.64, pitch:.06, feet:0, kick:0, vault:0};
 const rw = $("runway"), rx = rw.getContext("2d");
 const NX = .18;
 const RUN_IMPULSE = () => TOUCH ? .78 : .9;
 const RUN_VMAX = () => TOUCH ? 1.15 : 1.5;
-function artSettled(){ return R.loaded + R.failed >= 7; }
+function artSettled(){ return R.loaded + R.failed >= 1; }
 function markArt(ok){ if (ok) R.loaded++; else R.failed++; if (R.holdCount && artSettled()) { R.holdCount = false; startCount(); } }
 function loadArt(src, onok){ const im = new Image(); im.onload = () => { onok(im); markArt(true); }; im.onerror = () => markArt(false); im.src = src; }
-for (let i = 0; i < R.runFrames.length; i++) loadArt("assets/nabo/run-" + (i + 1) + ".webp", im => { R.runFrames[i] = im; });
-for (const k of ["jump", "hit"]) loadArt("assets/nabo/" + k + ".webp", im => { R.img[k] = im; });
+loadArt("assets/nabo/nabo-unified-v1.webp", im => { R.img.nabo = im; });
 for (const k of ["bg-far", "bg-near"]) { const im = new Image(); im.onload = () => { R.img[k] = im; }; im.src = "assets/run/" + k + ".png"; }
 function runReset(){
   Object.assign(R, {obs:[], dist:0, lives:3, jump:0, stumble:0, knock:0, iframe:0, heartT:[0,0,0], last:performance.now(), t:0,
@@ -1578,14 +1577,14 @@ function runDraw(){
   const knock = R.knock > 0 ? Math.sin(R.knock * Math.PI) * m.size * .26 : 0, x = NX * cw - knock;
   rx.save(); rx.translate(x, gy - 2); rx.scale(1 - arc * .35, .22); rx.globalAlpha = .28 * (1 - arc * .5); rx.fillStyle = "#000";
   rx.beginPath(); rx.ellipse(0, 0, m.size * .2, m.size * .2, 0, 0, 6.283); rx.fill(); rx.restore();
-  const key = R.stumble > 0 ? "hit" : R.jump > 0 ? "jump" : "run";
-  const runFrame = R.runFrames.every(Boolean) ? R.runFrames[fi] : R.runFrames.find(Boolean);
-  const im = (key === "run" && runFrame) || R.img[key] || runFrame || R.img.jump || R.img.hit;
+  // Use the same approved NABO artwork for every state so the character never changes identity.
+  const im = R.img.nabo;
   if (im) {
     rx.save(); if (R.iframe > 0 && ((R.t * 14) | 0) % 2 === 0) rx.globalAlpha = .3;
-    const n = Math.max(1, Math.round(im.width / im.height));
-    const f = key === "jump" && n > 1 ? Math.min(n - 1, Math.floor((1 - R.jump) * n)) : 0;
-    rx.drawImage(im, f * im.height, 0, im.height, im.height, x - m.size / 2, y, m.size, m.size); rx.restore();
+    rx.translate(x, y + m.size / 2);
+    const tilt = reduced ? 0 : R.stumble > 0 ? -.16 : moving && R.jump === 0 ? Math.sin(R.feet * Math.PI) * .045 : 0;
+    rx.rotate(tilt);
+    rx.drawImage(im, -m.size / 2, -m.size / 2, m.size, m.size); rx.restore();
   } else { rx.fillStyle = `rgb(${TH.text})`; rx.font = `${Math.max(10, ch * .1)}px sans-serif`; rx.fillText("NABO 素材未加载", x, gy - ch * .25); }
   drawLives(ch);
 }
